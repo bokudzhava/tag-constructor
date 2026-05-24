@@ -842,6 +842,49 @@
       )).join("");
     }
 
+    function renderFieldModeControl(selectedField) {
+      return [
+        '<div class="field"><label>Field</label><select id="fieldMode" name="fieldMode">',
+        renderFieldOptions(selectedField),
+        '<option value="__new__">Создать новый field</option>',
+        '</select></div>',
+        '<div class="field" id="newFieldRow" style="display:none"><label>Новый field</label><input id="newFieldInput" name="new_field" placeholder="product"></div>'
+      ].join("");
+    }
+
+    function setupFieldModeControl() {
+      const fieldMode = document.getElementById("fieldMode");
+      const newFieldRow = document.getElementById("newFieldRow");
+      const newFieldInput = document.getElementById("newFieldInput");
+      if (!fieldMode || !newFieldRow || !newFieldInput) {
+        return;
+      }
+      const syncNewField = () => {
+        const isNewField = fieldMode.value === "__new__";
+        newFieldRow.style.display = isNewField ? "" : "none";
+        newFieldInput.required = isNewField;
+        newFieldInput.disabled = !isNewField;
+        if (isNewField) {
+          newFieldInput.focus();
+        }
+      };
+      fieldMode.addEventListener("change", syncNewField);
+      syncNewField();
+    }
+
+    function resolveFieldFromForm(raw) {
+      const field = raw.fieldMode === "__new__" ? normalizeText(raw.new_field) : normalizeText(raw.fieldMode || raw.field);
+      if (!field) {
+        alert("Field не может быть пустым.");
+        return "";
+      }
+      if (!FIELD_PATTERN.test(field)) {
+        alert("Field должен быть lowercase latin/digits/underscore и начинаться с буквы.");
+        return "";
+      }
+      return field;
+    }
+
     function rowMatchesSearch(row) {
       if (!state.search) {
         return true;
@@ -1168,7 +1211,7 @@
       els.editorTitle.textContent = "Группа";
       els.editorBody.innerHTML = [
         '<form id="groupForm" class="form">',
-        '<div class="field"><label>Field</label><input name="field" value="' + escapeHtml(group.field) + '" disabled></div>',
+        renderFieldModeControl(group.field),
         '<div class="field"><label>Category</label><input name="category" value="' + escapeHtml(group.category) + '" required></div>',
         '<div class="message">Тегов: ' + rows.length + ', активных: ' + active + ', архивных: ' + archived + '.</div>',
         '<div class="actions">',
@@ -1182,9 +1225,16 @@
         '</form>'
       ].join("");
 
+      setupFieldModeControl();
+
       document.getElementById("groupForm").addEventListener("submit", event => {
         event.preventDefault();
-        const nextCategory = normalizeText(new FormData(event.currentTarget).get("category"));
+        const raw = Object.fromEntries(new FormData(event.currentTarget));
+        const nextField = resolveFieldFromForm(raw);
+        if (!nextField) {
+          return;
+        }
+        const nextCategory = normalizeText(raw.category);
         if (!nextCategory) {
           alert("Category не может быть пустым.");
           return;
@@ -1192,10 +1242,11 @@
         const current = splitGroupKey(state.selectedGroupKey);
         state.rows.forEach(row => {
           if (row.field === current.field && row.category === current.category) {
+            row.field = nextField;
             row.category = nextCategory;
           }
         });
-        state.selectedGroupKey = groupKey(current.field, nextCategory);
+        state.selectedGroupKey = groupKey(nextField, nextCategory);
         state.editorMode = "group";
         render();
       });
@@ -1233,8 +1284,7 @@
       els.editorTitle.textContent = "Новая группа";
       els.editorBody.innerHTML = [
         '<form id="newGroupForm" class="form">',
-        '<div class="field"><label>Field</label><select id="fieldMode" name="fieldMode">' + renderFieldOptions("conversation") + '<option value="__new__">Создать новый field</option></select></div>',
-        '<div class="field" id="newFieldRow" style="display:none"><label>Новый field</label><input id="newFieldInput" name="new_field" placeholder="product"></div>',
+        renderFieldModeControl("conversation"),
         '<div class="field"><label>Category</label><input name="category" placeholder="status" required></div>',
         '<div class="field"><label>Первый tag</label><input name="tag" placeholder="status.processing" required></div>',
         '<div class="field"><label>Русский label</label><input name="ru_label" placeholder="В обработке" required></div>',
@@ -1244,31 +1294,13 @@
         '</form>'
       ].join("");
 
-      const fieldMode = document.getElementById("fieldMode");
-      const newFieldRow = document.getElementById("newFieldRow");
-      const newFieldInput = document.getElementById("newFieldInput");
-      const syncNewField = () => {
-        const isNewField = fieldMode.value === "__new__";
-        newFieldRow.style.display = isNewField ? "" : "none";
-        newFieldInput.required = isNewField;
-        newFieldInput.disabled = !isNewField;
-        if (isNewField) {
-          newFieldInput.focus();
-        }
-      };
-      fieldMode.addEventListener("change", syncNewField);
-      syncNewField();
+      setupFieldModeControl();
 
       document.getElementById("newGroupForm").addEventListener("submit", event => {
         event.preventDefault();
         const raw = Object.fromEntries(new FormData(event.currentTarget));
-        const field = raw.fieldMode === "__new__" ? normalizeText(raw.new_field) : normalizeText(raw.fieldMode);
+        const field = resolveFieldFromForm(raw);
         if (!field) {
-          alert("Field не может быть пустым.");
-          return;
-        }
-        if (!FIELD_PATTERN.test(field)) {
-          alert("Field должен быть lowercase latin/digits/underscore и начинаться с буквы.");
           return;
         }
         const form = {
