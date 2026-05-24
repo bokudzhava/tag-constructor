@@ -593,8 +593,9 @@
   <script>
     const HEADERS = ["field", "tag", "category", "ru_label", "usage", "operator_selectable"];
     const IMPORT_HEADERS = ["tag", "category", "ru_label", "usage"];
-    const VALID_FIELDS = new Set(["user", "conversation"]);
+    const CORE_FIELDS = ["user", "conversation"];
     const VALID_SELECTABLE = new Set(["yes", "no"]);
+    const FIELD_PATTERN = /^[a-z][a-z0-9_]*$/;
     const TAG_PATTERN = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/;
 
     const state = {
@@ -796,6 +797,51 @@
       });
     }
 
+    function getFields() {
+      const fields = new Set(CORE_FIELDS);
+      state.rows.forEach(row => {
+        if (row.field) {
+          fields.add(row.field);
+        }
+      });
+      return Array.from(fields).sort(compareFields);
+    }
+
+    function compareFields(a, b) {
+      const aIndex = CORE_FIELDS.indexOf(a);
+      const bIndex = CORE_FIELDS.indexOf(b);
+      if (aIndex !== -1 || bIndex !== -1) {
+        if (aIndex === -1) {
+          return 1;
+        }
+        if (bIndex === -1) {
+          return -1;
+        }
+        return aIndex - bIndex;
+      }
+      return a.localeCompare(b, "ru");
+    }
+
+    function fieldTitle(field) {
+      if (field === "user") {
+        return "User Tags";
+      }
+      if (field === "conversation") {
+        return "Conversation Tags";
+      }
+      return field + " Tags";
+    }
+
+    function renderFieldOptions(selectedField) {
+      const fields = getFields();
+      if (selectedField && !fields.includes(selectedField)) {
+        fields.push(selectedField);
+      }
+      return fields.map(field => (
+        '<option value="' + escapeHtml(field) + '"' + selected(field, selectedField) + '>' + escapeHtml(field) + '</option>'
+      )).join("");
+    }
+
     function rowMatchesSearch(row) {
       if (!state.search) {
         return true;
@@ -835,8 +881,8 @@
           }
         });
 
-        if (row.field && !VALID_FIELDS.has(row.field)) {
-          errors.push("Строка " + line + ": field должен быть user или conversation.");
+        if (row.field && !FIELD_PATTERN.test(row.field)) {
+          errors.push("Строка " + line + ": field должен быть lowercase latin/digits/underscore и начинаться с буквы.");
         }
 
         if (row.operator_selectable && !VALID_SELECTABLE.has(row.operator_selectable)) {
@@ -855,7 +901,7 @@
         }
 
         const parts = String(row.tag || "").split(".");
-        const expectedCategory = row.field === "user" ? parts[1] : parts[0];
+        const expectedCategory = parts[0] === row.field ? parts[1] : parts[0];
         if (row.category && expectedCategory && row.category !== expectedCategory) {
           warnings.push("Строка " + line + ": category " + row.category + " не совпадает с ожидаемым сегментом " + expectedCategory + " для " + row.tag + ".");
         }
@@ -873,10 +919,12 @@
     function getStats(validation) {
       const activeUser = state.rows.filter(row => row.field === "user" && row.operator_selectable === "yes").length;
       const activeConversation = state.rows.filter(row => row.field === "conversation" && row.operator_selectable === "yes").length;
+      const fieldCount = getFields().filter(field => state.rows.some(row => row.field === field)).length;
       const archived = state.rows.filter(row => row.operator_selectable === "no").length;
       return [
         { label: "User active", value: activeUser },
         { label: "Conversation active", value: activeConversation },
+        { label: "Fields", value: fieldCount },
         { label: "Archived", value: archived },
         { label: "Errors", value: validation.errors.length },
         { label: "Warnings", value: validation.warnings.length }
@@ -953,10 +1001,9 @@
         return;
       }
 
-      const sections = [
-        { field: "user", title: "User Tags" },
-        { field: "conversation", title: "Conversation Tags" }
-      ];
+      const sections = Array.from(new Set(groups.map(group => group.field)))
+        .sort(compareFields)
+        .map(field => ({ field, title: fieldTitle(field) }));
 
       els.groupList.innerHTML = sections.map(section => {
         const sectionGroups = groups.filter(group => group.field === section.field);
@@ -1186,7 +1233,8 @@
       els.editorTitle.textContent = "Новая группа";
       els.editorBody.innerHTML = [
         '<form id="newGroupForm" class="form">',
-        '<div class="field"><label>Field</label><select name="field"><option value="conversation">conversation</option><option value="user">user</option></select></div>',
+        '<div class="field"><label>Field</label><select id="fieldMode" name="fieldMode">' + renderFieldOptions("conversation") + '<option value="__new__">Создать новый field</option></select></div>',
+        '<div class="field" id="newFieldRow" style="display:none"><label>Новый field</label><input id="newFieldInput" name="new_field" placeholder="product"></div>',
         '<div class="field"><label>Category</label><input name="category" placeholder="status" required></div>',
         '<div class="field"><label>Первый tag</label><input name="tag" placeholder="status.processing" required></div>',
         '<div class="field"><label>Русский label</label><input name="ru_label" placeholder="В обработке" required></div>',
@@ -1196,9 +1244,41 @@
         '</form>'
       ].join("");
 
+      const fieldMode = document.getElementById("fieldMode");
+      const newFieldRow = document.getElementById("newFieldRow");
+      const newFieldInput = document.getElementById("newFieldInput");
+      const syncNewField = () => {
+        const isNewField = fieldMode.value === "__new__";
+        newFieldRow.style.display = isNewField ? "" : "none";
+        newFieldInput.required = isNewField;
+        newFieldInput.disabled = !isNewField;
+        if (isNewField) {
+          newFieldInput.focus();
+        }
+      };
+      fieldMode.addEventListener("change", syncNewField);
+      syncNewField();
+
       document.getElementById("newGroupForm").addEventListener("submit", event => {
         event.preventDefault();
-        const form = Object.fromEntries(new FormData(event.currentTarget));
+        const raw = Object.fromEntries(new FormData(event.currentTarget));
+        const field = raw.fieldMode === "__new__" ? normalizeText(raw.new_field) : normalizeText(raw.fieldMode);
+        if (!field) {
+          alert("Field не может быть пустым.");
+          return;
+        }
+        if (!FIELD_PATTERN.test(field)) {
+          alert("Field должен быть lowercase latin/digits/underscore и начинаться с буквы.");
+          return;
+        }
+        const form = {
+          field,
+          tag: raw.tag,
+          category: raw.category,
+          ru_label: raw.ru_label,
+          usage: raw.usage,
+          operator_selectable: raw.operator_selectable
+        };
         const row = makeRow(form);
         state.rows.push(row);
         state.selectedGroupKey = groupKey(row.field, row.category);
@@ -1221,12 +1301,7 @@
       };
       const fieldControl = isNew
         ? '<input name="field" value="' + escapeHtml(data.field) + '" readonly>'
-        : [
-          '<select name="field">',
-          '<option value="conversation"' + selected(data.field, "conversation") + '>conversation</option>',
-          '<option value="user"' + selected(data.field, "user") + '>user</option>',
-          '</select>'
-        ].join("");
+        : '<select name="field">' + renderFieldOptions(data.field) + '</select>';
       const categoryReadonly = isNew ? " readonly" : "";
 
       els.editorTitle.textContent = isNew ? "Новый тег" : "Тег";
