@@ -365,12 +365,6 @@
       font-weight: 700;
     }
 
-    .copy-tag-button.copied {
-      color: var(--ok);
-      border-color: #acd8bb;
-      background: var(--ok-soft);
-    }
-
     .badge {
       display: inline-flex;
       align-items: center;
@@ -1049,56 +1043,39 @@
 
     }
 
-    async function copyTagToClipboard(tag, button) {
-      const text = String(tag || "");
-      try {
-        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-          await navigator.clipboard.writeText(text);
-          showCopyState(button, "Скопировано", true);
-          return;
-        }
-      } catch (error) {
-        // Some local file contexts expose clipboard API but reject writes.
-      }
-
-      try {
-        copyTextFallback(text);
-        showCopyState(button, "Скопировано", true);
-        return;
-      } catch (error) {
-        if (selectTagInput()) {
-          showCopyState(button, "Выделено", false);
-        } else {
-          showCopyState(button, "Не скопировано", false);
-        }
-      }
+    function createTagCopy(source) {
+      const row = {
+        id: makeId(),
+        field: source.field,
+        tag: makeCopiedTagName(source.tag),
+        category: source.category,
+        ru_label: source.ru_label,
+        usage: source.usage,
+        operator_selectable: source.operator_selectable || "yes"
+      };
+      state.rows.push(row);
+      state.selectedGroupKey = groupKey(row.field, row.category);
+      state.selectedTagId = row.id;
+      state.editorMode = "tag";
+      state.search = "";
+      els.searchInput.value = "";
+      render();
+      focusTagInput();
     }
 
-    function copyTextFallback(text) {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.setAttribute("readonly", "");
-      textarea.style.position = "fixed";
-      textarea.style.top = "0";
-      textarea.style.left = "0";
-      textarea.style.width = "1px";
-      textarea.style.height = "1px";
-      textarea.style.opacity = "0";
-      textarea.style.pointerEvents = "none";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      if (textarea.setSelectionRange) {
-        textarea.setSelectionRange(0, textarea.value.length);
+    function makeCopiedTagName(tag) {
+      const base = normalizeText(tag) || "tag.copy";
+      const existing = new Set(state.rows.map(row => row.tag));
+      let index = 1;
+      let candidate = base + "_copy";
+      while (existing.has(candidate)) {
+        index += 1;
+        candidate = base + "_copy_" + index;
       }
-      const copied = document.execCommand && document.execCommand("copy");
-      textarea.remove();
-      if (!copied) {
-        throw new Error("Copy command failed");
-      }
+      return candidate;
     }
 
-    function selectTagInput() {
+    function focusTagInput() {
       const input = document.getElementById("tagInput");
       if (!input) {
         return false;
@@ -1109,17 +1086,6 @@
         input.setSelectionRange(0, input.value.length);
       }
       return true;
-    }
-
-    function showCopyState(button, label, success) {
-      const original = button.getAttribute("data-original-label") || button.textContent;
-      button.setAttribute("data-original-label", original);
-      button.textContent = label;
-      button.classList.toggle("copied", success);
-      window.setTimeout(() => {
-        button.textContent = original;
-        button.classList.remove("copied");
-      }, 1400);
     }
 
     function renderEditor() {
@@ -1278,7 +1244,7 @@
         '<div class="actions"><button class="primary" type="submit">' + (isNew ? "Создать тег" : "Сохранить тег") + '</button></div>',
         isNew ? "" : [
           '<div class="split-actions tag-actions">',
-          '<button id="copyTag" class="copy-tag-button" type="button">Копировать тег</button>',
+          '<button id="copyTag" class="copy-tag-button" type="button" title="Создать копию этого тега в той же группе">Копировать тег</button>',
           '<button id="archiveTag" type="button">' + (data.operator_selectable === "yes" ? "Архивировать" : "Вернуть активным") + '</button>',
           '<button id="deleteTag" class="danger" type="button">Удалить тег</button>',
           '</div>'
@@ -1310,8 +1276,8 @@
 
       const copyButton = document.getElementById("copyTag");
       if (copyButton && row) {
-        copyButton.addEventListener("click", async () => {
-          await copyTagToClipboard(row.tag, copyButton);
+        copyButton.addEventListener("click", () => {
+          createTagCopy(row);
         });
       }
 
