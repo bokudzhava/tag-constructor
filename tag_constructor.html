@@ -1,0 +1,1467 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Конструктор тегов</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --panel-soft: #f9fbfb;
+      --border: #d9e1e3;
+      --border-strong: #aab7bb;
+      --text: #172126;
+      --muted: #637178;
+      --accent: #0f766e;
+      --accent-strong: #0b5f59;
+      --accent-soft: #e3f5f2;
+      --danger: #b42318;
+      --danger-soft: #fde8e5;
+      --warning: #a15c07;
+      --warning-soft: #fff1d6;
+      --ok: #247346;
+      --ok-soft: #e2f4e8;
+      --shadow: 0 10px 30px rgba(23, 33, 38, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--text);
+      cursor: pointer;
+      min-height: 36px;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .primary:hover:not(:disabled) {
+      border-color: var(--accent-strong);
+      background: var(--accent-strong);
+    }
+
+    .danger {
+      border-color: #efb5ae;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .ghost {
+      background: transparent;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 100%;
+    }
+
+    .topbar {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.94);
+      position: sticky;
+      top: 0;
+      z-index: 4;
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    .brand strong {
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    .brand span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .search {
+      width: 100%;
+      min-width: 220px;
+      position: relative;
+    }
+
+    .search input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 12px;
+      background: var(--panel);
+      color: var(--text);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(230px, 300px) minmax(360px, 1fr) minmax(300px, 380px);
+      gap: 14px;
+      min-height: 0;
+      padding: 14px;
+    }
+
+    .pane {
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .pane-header {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel-soft);
+    }
+
+    .pane-header h2 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    .pane-body {
+      height: calc(100vh - 128px);
+      min-height: 420px;
+      overflow: auto;
+      padding: 12px;
+    }
+
+    .groups {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .group-section-title {
+      margin: 4px 2px 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .group-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .group-button {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      width: 100%;
+      min-height: 44px;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      text-align: left;
+    }
+
+    .group-button.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .group-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 700;
+    }
+
+    .group-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .count-pill {
+      align-self: center;
+      border-radius: 999px;
+      background: #eef2f2;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 7px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      display: grid;
+      gap: 2px;
+      min-width: 110px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      background: var(--panel-soft);
+    }
+
+    .stat strong {
+      font-size: 18px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .message {
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+
+    .message.error {
+      border-color: #f4b8b2;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .message.warning {
+      border-color: #ffd58f;
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .tag-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 10px;
+    }
+
+    .tag-card {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 11px;
+      background: var(--panel);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .tag-card:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+    }
+
+    .tag-card:focus {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.15);
+    }
+
+    .tag-card.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .tag-card.archived {
+      border-style: dashed;
+      opacity: 0.72;
+    }
+
+    .tag-top {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .tag-code {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .copy-tag-button {
+      color: var(--accent);
+      border-color: #b8deda;
+      background: #f1fbf9;
+      font-weight: 700;
+    }
+
+    .copy-tag-button.copied {
+      color: var(--ok);
+      border-color: #acd8bb;
+      background: var(--ok-soft);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 22px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: var(--muted);
+      background: #edf1f1;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .badge.ok {
+      background: var(--ok-soft);
+      color: var(--ok);
+    }
+
+    .badge.warn {
+      background: var(--warning-soft);
+      color: var(--warning);
+    }
+
+    .badge.error {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .tag-label {
+      font-weight: 700;
+    }
+
+    .tag-usage {
+      color: var(--muted);
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+    }
+
+    .form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--text);
+      padding: 8px 10px;
+    }
+
+    .field textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus,
+    .search input:focus {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.15);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .split-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .tag-actions {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      min-height: 260px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 7px;
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .validation-list {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .hidden-input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1120px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        justify-content: flex-start;
+      }
+
+      .shell {
+        grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr);
+      }
+
+      .editor-pane {
+        grid-column: 1 / -1;
+      }
+
+      .pane-body {
+        height: auto;
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        grid-template-columns: 1fr;
+        padding: 10px;
+      }
+
+      .topbar {
+        padding: 12px;
+      }
+
+      .toolbar button,
+      .toolbar label,
+      .actions button,
+      .split-actions button {
+        width: 100%;
+      }
+
+      .split-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <strong>Конструктор тегов</strong>
+        <span id="fileStatus">CSV не загружен</span>
+      </div>
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Поиск по tag, label, usage или category" autocomplete="off">
+      </div>
+      <div class="toolbar">
+        <input id="fileInput" class="hidden-input" type="file" accept=".csv,text/csv">
+        <button id="importButton" type="button">Импорт CSV</button>
+        <button id="exportTaxonomyButton" type="button">Taxonomy</button>
+        <button id="exportUserButton" type="button">User import</button>
+        <button id="exportConversationButton" type="button">Conversation import</button>
+        <button id="exportAllButton" class="primary" type="button">Скачать 3 CSV</button>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="pane">
+        <div class="pane-header">
+          <h2>Группы</h2>
+          <button id="newGroupButton" type="button">+ Группа</button>
+        </div>
+        <div class="pane-body">
+          <div id="groupList" class="groups"></div>
+        </div>
+      </section>
+
+      <section class="pane">
+        <div class="pane-header">
+          <h2 id="tagPaneTitle">Теги</h2>
+          <button id="newTagButton" type="button" disabled>+ Тег</button>
+        </div>
+        <div class="pane-body">
+          <div id="stats" class="stats"></div>
+          <div id="validationBox"></div>
+          <div id="tagList" class="tag-grid"></div>
+        </div>
+      </section>
+
+      <section class="pane editor-pane">
+        <div class="pane-header">
+          <h2 id="editorTitle">Редактор</h2>
+          <button id="clearSelectionButton" class="ghost" type="button">Сброс</button>
+        </div>
+        <div id="editorBody" class="pane-body"></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const HEADERS = ["field", "tag", "category", "ru_label", "usage", "operator_selectable"];
+    const IMPORT_HEADERS = ["tag", "category", "ru_label", "usage"];
+    const VALID_FIELDS = new Set(["user", "conversation"]);
+    const VALID_SELECTABLE = new Set(["yes", "no"]);
+    const TAG_PATTERN = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/;
+
+    const state = {
+      rows: [],
+      selectedGroupKey: "",
+      selectedTagId: "",
+      editorMode: "empty",
+      search: "",
+      fileName: "",
+      nextId: 1
+    };
+
+    const els = {
+      fileStatus: document.getElementById("fileStatus"),
+      fileInput: document.getElementById("fileInput"),
+      importButton: document.getElementById("importButton"),
+      exportTaxonomyButton: document.getElementById("exportTaxonomyButton"),
+      exportUserButton: document.getElementById("exportUserButton"),
+      exportConversationButton: document.getElementById("exportConversationButton"),
+      exportAllButton: document.getElementById("exportAllButton"),
+      searchInput: document.getElementById("searchInput"),
+      groupList: document.getElementById("groupList"),
+      tagList: document.getElementById("tagList"),
+      tagPaneTitle: document.getElementById("tagPaneTitle"),
+      newTagButton: document.getElementById("newTagButton"),
+      newGroupButton: document.getElementById("newGroupButton"),
+      stats: document.getElementById("stats"),
+      validationBox: document.getElementById("validationBox"),
+      editorTitle: document.getElementById("editorTitle"),
+      editorBody: document.getElementById("editorBody"),
+      clearSelectionButton: document.getElementById("clearSelectionButton")
+    };
+
+    function normalizeText(value) {
+      return String(value || "").trim();
+    }
+
+    function makeId() {
+      const id = "tag-" + state.nextId;
+      state.nextId += 1;
+      return id;
+    }
+
+    function groupKey(field, category) {
+      return field + "::" + category;
+    }
+
+    function splitGroupKey(key) {
+      const index = key.indexOf("::");
+      if (index === -1) {
+        return { field: "", category: "" };
+      }
+      return {
+        field: key.slice(0, index),
+        category: key.slice(index + 2)
+      };
+    }
+
+    function getGroupRows(key) {
+      const group = splitGroupKey(key);
+      return state.rows.filter(row => row.field === group.field && row.category === group.category);
+    }
+
+    function getSelectedTag() {
+      return state.rows.find(row => row.id === state.selectedTagId) || null;
+    }
+
+    function parseCsv(text) {
+      const input = String(text || "").replace(/^\uFEFF/, "");
+      const rows = [];
+      let row = [];
+      let value = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < input.length; i += 1) {
+        const char = input[i];
+        const next = input[i + 1];
+
+        if (inQuotes) {
+          if (char === '"' && next === '"') {
+            value += '"';
+            i += 1;
+          } else if (char === '"') {
+            inQuotes = false;
+          } else {
+            value += char;
+          }
+          continue;
+        }
+
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ";") {
+          row.push(value);
+          value = "";
+        } else if (char === "\n") {
+          row.push(value);
+          rows.push(row);
+          row = [];
+          value = "";
+        } else if (char !== "\r") {
+          value += char;
+        }
+      }
+
+      if (value.length || row.length) {
+        row.push(value);
+        rows.push(row);
+      }
+
+      const nonEmptyRows = rows.filter(items => items.some(item => normalizeText(item)));
+      if (!nonEmptyRows.length) {
+        return [];
+      }
+
+      const headers = nonEmptyRows[0].map(normalizeText);
+      const missing = HEADERS.filter(header => !headers.includes(header));
+      if (missing.length) {
+        throw new Error("В CSV нет колонок: " + missing.join(", "));
+      }
+
+      return nonEmptyRows.slice(1).map(items => {
+        const rowObject = { id: makeId() };
+        headers.forEach((header, index) => {
+          rowObject[header] = normalizeText(items[index]);
+        });
+        HEADERS.forEach(header => {
+          if (!(header in rowObject)) {
+            rowObject[header] = "";
+          }
+        });
+        return rowObject;
+      });
+    }
+
+    function csvValue(value) {
+      return '"' + String(value || "").replace(/"/g, '""') + '"';
+    }
+
+    function serializeCsv(rows, headers) {
+      const lines = [
+        headers.map(csvValue).join(";"),
+        ...rows.map(row => headers.map(header => csvValue(row[header])).join(";"))
+      ];
+      return "\uFEFF" + lines.join("\r\n") + "\r\n";
+    }
+
+    function downloadCsv(fileName, rows, headers) {
+      const blob = new Blob([serializeCsv(rows, headers)], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importRows(rows, fileName) {
+      state.rows = rows;
+      state.fileName = fileName || "helpdesk_tag_taxonomy.csv";
+      state.selectedTagId = "";
+      const firstGroup = getGroups()[0];
+      state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+      state.editorMode = state.selectedGroupKey ? "group" : "empty";
+      render();
+    }
+
+    function getGroups() {
+      const map = new Map();
+      state.rows.forEach(row => {
+        const key = groupKey(row.field, row.category);
+        if (!map.has(key)) {
+          map.set(key, {
+            key,
+            field: row.field,
+            category: row.category,
+            total: 0,
+            active: 0,
+            archived: 0
+          });
+        }
+        const group = map.get(key);
+        group.total += 1;
+        if (row.operator_selectable === "yes") {
+          group.active += 1;
+        } else {
+          group.archived += 1;
+        }
+      });
+
+      return Array.from(map.values()).sort((a, b) => {
+        const fieldOrder = a.field.localeCompare(b.field, "ru");
+        if (fieldOrder !== 0) {
+          return fieldOrder;
+        }
+        return a.category.localeCompare(b.category, "ru");
+      });
+    }
+
+    function rowMatchesSearch(row) {
+      if (!state.search) {
+        return true;
+      }
+      const haystack = [
+        row.field,
+        row.tag,
+        row.category,
+        row.ru_label,
+        row.usage,
+        row.operator_selectable
+      ].join(" ").toLowerCase();
+      return haystack.includes(state.search.toLowerCase());
+    }
+
+    function groupMatchesSearch(group) {
+      if (!state.search) {
+        return true;
+      }
+      const ownText = [group.field, group.category].join(" ").toLowerCase();
+      if (ownText.includes(state.search.toLowerCase())) {
+        return true;
+      }
+      return getGroupRows(group.key).some(rowMatchesSearch);
+    }
+
+    function validateRows() {
+      const errors = [];
+      const warnings = [];
+      const byTag = new Map();
+
+      state.rows.forEach((row, index) => {
+        const line = index + 2;
+        HEADERS.forEach(header => {
+          if (!normalizeText(row[header])) {
+            errors.push("Строка " + line + ": пустое поле " + header + ".");
+          }
+        });
+
+        if (row.field && !VALID_FIELDS.has(row.field)) {
+          errors.push("Строка " + line + ": field должен быть user или conversation.");
+        }
+
+        if (row.operator_selectable && !VALID_SELECTABLE.has(row.operator_selectable)) {
+          errors.push("Строка " + line + ": operator_selectable должен быть yes или no.");
+        }
+
+        if (row.tag && !TAG_PATTERN.test(row.tag)) {
+          errors.push("Строка " + line + ": неверное имя тега " + row.tag + ".");
+        }
+
+        if (row.tag) {
+          if (!byTag.has(row.tag)) {
+            byTag.set(row.tag, []);
+          }
+          byTag.get(row.tag).push(line);
+        }
+
+        const parts = String(row.tag || "").split(".");
+        const expectedCategory = row.field === "user" ? parts[1] : parts[0];
+        if (row.category && expectedCategory && row.category !== expectedCategory) {
+          warnings.push("Строка " + line + ": category " + row.category + " не совпадает с ожидаемым сегментом " + expectedCategory + " для " + row.tag + ".");
+        }
+      });
+
+      byTag.forEach((lines, tag) => {
+        if (lines.length > 1) {
+          errors.push("Дубль tag " + tag + " в строках " + lines.join(", ") + ".");
+        }
+      });
+
+      return { errors, warnings };
+    }
+
+    function getStats(validation) {
+      const activeUser = state.rows.filter(row => row.field === "user" && row.operator_selectable === "yes").length;
+      const activeConversation = state.rows.filter(row => row.field === "conversation" && row.operator_selectable === "yes").length;
+      const archived = state.rows.filter(row => row.operator_selectable === "no").length;
+      return [
+        { label: "User active", value: activeUser },
+        { label: "Conversation active", value: activeConversation },
+        { label: "Archived", value: archived },
+        { label: "Errors", value: validation.errors.length },
+        { label: "Warnings", value: validation.warnings.length }
+      ];
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function render() {
+      const validation = validateRows();
+      const hasErrors = validation.errors.length > 0;
+      const hasRows = state.rows.length > 0;
+
+      els.fileStatus.textContent = hasRows
+        ? state.fileName + " | " + state.rows.length + " строк"
+        : "CSV не загружен";
+
+      [
+        els.exportTaxonomyButton,
+        els.exportUserButton,
+        els.exportConversationButton,
+        els.exportAllButton
+      ].forEach(button => {
+        button.disabled = !hasRows || hasErrors;
+      });
+
+      renderStats(validation);
+      renderValidation(validation);
+      renderGroups();
+      renderTags();
+      renderEditor();
+    }
+
+    function renderStats(validation) {
+      els.stats.innerHTML = getStats(validation).map(item => (
+        '<div class="stat"><strong>' + item.value + '</strong><span>' + escapeHtml(item.label) + '</span></div>'
+      )).join("");
+    }
+
+    function renderValidation(validation) {
+      if (!state.rows.length) {
+        els.validationBox.innerHTML = '<div class="message">Загрузите helpdesk_tag_taxonomy.csv, чтобы начать редактирование.</div>';
+        return;
+      }
+
+      if (validation.errors.length) {
+        const items = validation.errors.slice(0, 6).map(error => '<li>' + escapeHtml(error) + '</li>').join("");
+        const more = validation.errors.length > 6 ? '<li>Еще ошибок: ' + (validation.errors.length - 6) + '.</li>' : "";
+        els.validationBox.innerHTML = '<div class="message error"><strong>Экспорт заблокирован.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+        return;
+      }
+
+      if (validation.warnings.length) {
+        const items = validation.warnings.slice(0, 4).map(warning => '<li>' + escapeHtml(warning) + '</li>').join("");
+        const more = validation.warnings.length > 4 ? '<li>Еще предупреждений: ' + (validation.warnings.length - 4) + '.</li>' : "";
+        els.validationBox.innerHTML = '<div class="message warning"><strong>Можно экспортировать, есть предупреждения.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+        return;
+      }
+
+      els.validationBox.innerHTML = '<div class="message"><strong>Проверка пройдена.</strong> Можно экспортировать файлы.</div>';
+    }
+
+    function renderGroups() {
+      const groups = getGroups().filter(groupMatchesSearch);
+      if (!groups.length) {
+        els.groupList.innerHTML = '<div class="empty">Группы не найдены.</div>';
+        return;
+      }
+
+      const sections = [
+        { field: "user", title: "User Tags" },
+        { field: "conversation", title: "Conversation Tags" }
+      ];
+
+      els.groupList.innerHTML = sections.map(section => {
+        const sectionGroups = groups.filter(group => group.field === section.field);
+        if (!sectionGroups.length) {
+          return "";
+        }
+        const list = sectionGroups.map(group => {
+          const isActive = group.key === state.selectedGroupKey ? " active" : "";
+          const archivedText = group.archived ? " | архив: " + group.archived : "";
+          return [
+            '<button class="group-button' + isActive + '" type="button" data-group="' + escapeHtml(group.key) + '">',
+            '<span><span class="group-name">' + escapeHtml(group.category) + '</span>',
+            '<span class="group-meta">' + escapeHtml(group.field) + archivedText + '</span></span>',
+            '<span class="count-pill">' + group.active + '/' + group.total + '</span>',
+            '</button>'
+          ].join("");
+        }).join("");
+
+        return '<div><div class="group-section-title">' + section.title + '</div><div class="group-list">' + list + '</div></div>';
+      }).join("");
+
+      els.groupList.querySelectorAll("[data-group]").forEach(button => {
+        button.addEventListener("click", () => {
+          state.selectedGroupKey = button.getAttribute("data-group");
+          state.selectedTagId = "";
+          state.editorMode = "group";
+          render();
+        });
+      });
+    }
+
+    function renderTags() {
+      const group = splitGroupKey(state.selectedGroupKey);
+      const rows = getGroupRows(state.selectedGroupKey).filter(rowMatchesSearch).sort((a, b) => a.tag.localeCompare(b.tag));
+
+      els.newTagButton.disabled = !state.selectedGroupKey;
+      els.tagPaneTitle.textContent = state.selectedGroupKey
+        ? group.field + " / " + group.category
+        : "Теги";
+
+      if (!state.selectedGroupKey) {
+        els.tagList.innerHTML = '<div class="empty">Выберите группу слева или создайте новую.</div>';
+        return;
+      }
+
+      if (!rows.length) {
+        els.tagList.innerHTML = '<div class="empty">В выбранной группе нет тегов по текущему поиску.</div>';
+        return;
+      }
+
+      els.tagList.innerHTML = rows.map(row => {
+        const active = row.id === state.selectedTagId ? " active" : "";
+        const archived = row.operator_selectable === "no" ? " archived" : "";
+        const statusClass = row.operator_selectable === "yes" ? "ok" : "warn";
+        const statusText = row.operator_selectable === "yes" ? "active" : "archived";
+        return [
+          '<div class="tag-card' + active + archived + '" role="button" tabindex="0" data-tag-id="' + escapeHtml(row.id) + '">',
+          '<span class="tag-top"><span class="tag-code">' + escapeHtml(row.tag) + '</span><span class="badge ' + statusClass + '">' + statusText + '</span></span>',
+          '<span class="tag-label">' + escapeHtml(row.ru_label) + '</span>',
+          '<span class="tag-usage">' + escapeHtml(row.usage) + '</span>',
+          '</div>'
+        ].join("");
+      }).join("");
+
+      els.tagList.querySelectorAll("[data-tag-id]").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.editorMode = "tag";
+          render();
+        });
+        card.addEventListener("keydown", event => {
+          if (event.target.closest("button")) {
+            return;
+          }
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
+          event.preventDefault();
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.editorMode = "tag";
+          render();
+        });
+      });
+
+    }
+
+    async function copyTagToClipboard(tag, button) {
+      const text = String(tag || "");
+      try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+          await navigator.clipboard.writeText(text);
+          showCopyState(button, "Скопировано", true);
+          return;
+        }
+      } catch (error) {
+        // Some local file contexts expose clipboard API but reject writes.
+      }
+
+      try {
+        copyTextFallback(text);
+        showCopyState(button, "Скопировано", true);
+        return;
+      } catch (error) {
+        if (selectTagInput()) {
+          showCopyState(button, "Выделено", false);
+        } else {
+          showCopyState(button, "Не скопировано", false);
+        }
+      }
+    }
+
+    function copyTextFallback(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "0";
+      textarea.style.left = "0";
+      textarea.style.width = "1px";
+      textarea.style.height = "1px";
+      textarea.style.opacity = "0";
+      textarea.style.pointerEvents = "none";
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      if (textarea.setSelectionRange) {
+        textarea.setSelectionRange(0, textarea.value.length);
+      }
+      const copied = document.execCommand && document.execCommand("copy");
+      textarea.remove();
+      if (!copied) {
+        throw new Error("Copy command failed");
+      }
+    }
+
+    function selectTagInput() {
+      const input = document.getElementById("tagInput");
+      if (!input) {
+        return false;
+      }
+      input.focus();
+      input.select();
+      if (input.setSelectionRange) {
+        input.setSelectionRange(0, input.value.length);
+      }
+      return true;
+    }
+
+    function showCopyState(button, label, success) {
+      const original = button.getAttribute("data-original-label") || button.textContent;
+      button.setAttribute("data-original-label", original);
+      button.textContent = label;
+      button.classList.toggle("copied", success);
+      window.setTimeout(() => {
+        button.textContent = original;
+        button.classList.remove("copied");
+      }, 1400);
+    }
+
+    function renderEditor() {
+      if (state.editorMode === "newGroup") {
+        renderNewGroupEditor();
+        return;
+      }
+
+      if (state.editorMode === "newTag") {
+        renderTagEditor(null);
+        return;
+      }
+
+      if (state.editorMode === "tag") {
+        renderTagEditor(getSelectedTag());
+        return;
+      }
+
+      if (state.editorMode === "group" && state.selectedGroupKey) {
+        renderGroupEditor();
+        return;
+      }
+
+      els.editorTitle.textContent = "Редактор";
+      els.editorBody.innerHTML = '<div class="empty">Загрузите CSV и выберите группу или тег.</div>';
+    }
+
+    function renderGroupEditor() {
+      const group = splitGroupKey(state.selectedGroupKey);
+      const rows = getGroupRows(state.selectedGroupKey);
+      const active = rows.filter(row => row.operator_selectable === "yes").length;
+      const archived = rows.length - active;
+      els.editorTitle.textContent = "Группа";
+      els.editorBody.innerHTML = [
+        '<form id="groupForm" class="form">',
+        '<div class="field"><label>Field</label><input name="field" value="' + escapeHtml(group.field) + '" disabled></div>',
+        '<div class="field"><label>Category</label><input name="category" value="' + escapeHtml(group.category) + '" required></div>',
+        '<div class="message">Тегов: ' + rows.length + ', активных: ' + active + ', архивных: ' + archived + '.</div>',
+        '<div class="actions">',
+        '<button class="primary" type="submit">Сохранить группу</button>',
+        '<button id="addTagFromGroup" type="button">+ Тег</button>',
+        '</div>',
+        '<div class="split-actions">',
+        '<button id="archiveGroup" type="button">Архивировать группу</button>',
+        '<button id="deleteGroup" class="danger" type="button">Удалить группу</button>',
+        '</div>',
+        '</form>'
+      ].join("");
+
+      document.getElementById("groupForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const nextCategory = normalizeText(new FormData(event.currentTarget).get("category"));
+        if (!nextCategory) {
+          alert("Category не может быть пустым.");
+          return;
+        }
+        const current = splitGroupKey(state.selectedGroupKey);
+        state.rows.forEach(row => {
+          if (row.field === current.field && row.category === current.category) {
+            row.category = nextCategory;
+          }
+        });
+        state.selectedGroupKey = groupKey(current.field, nextCategory);
+        state.editorMode = "group";
+        render();
+      });
+
+      document.getElementById("addTagFromGroup").addEventListener("click", () => {
+        state.selectedTagId = "";
+        state.editorMode = "newTag";
+        render();
+      });
+
+      document.getElementById("archiveGroup").addEventListener("click", () => {
+        if (!confirm("Архивировать все теги группы " + group.category + "?")) {
+          return;
+        }
+        rows.forEach(row => {
+          row.operator_selectable = "no";
+        });
+        render();
+      });
+
+      document.getElementById("deleteGroup").addEventListener("click", () => {
+        if (!confirm("Удалить группу " + group.category + " и все ее теги из taxonomy?")) {
+          return;
+        }
+        state.rows = state.rows.filter(row => !(row.field === group.field && row.category === group.category));
+        const firstGroup = getGroups()[0];
+        state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+        state.selectedTagId = "";
+        state.editorMode = state.selectedGroupKey ? "group" : "empty";
+        render();
+      });
+    }
+
+    function renderNewGroupEditor() {
+      els.editorTitle.textContent = "Новая группа";
+      els.editorBody.innerHTML = [
+        '<form id="newGroupForm" class="form">',
+        '<div class="field"><label>Field</label><select name="field"><option value="conversation">conversation</option><option value="user">user</option></select></div>',
+        '<div class="field"><label>Category</label><input name="category" placeholder="status" required></div>',
+        '<div class="field"><label>Первый tag</label><input name="tag" placeholder="status.processing" required></div>',
+        '<div class="field"><label>Русский label</label><input name="ru_label" placeholder="В обработке" required></div>',
+        '<div class="field"><label>Usage</label><textarea name="usage" placeholder="Когда применять тег" required></textarea></div>',
+        '<div class="field"><label>Operator selectable</label><select name="operator_selectable"><option value="yes">yes</option><option value="no">no</option></select></div>',
+        '<div class="actions"><button class="primary" type="submit">Создать группу</button></div>',
+        '</form>'
+      ].join("");
+
+      document.getElementById("newGroupForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = Object.fromEntries(new FormData(event.currentTarget));
+        const row = makeRow(form);
+        state.rows.push(row);
+        state.selectedGroupKey = groupKey(row.field, row.category);
+        state.selectedTagId = row.id;
+        state.editorMode = "tag";
+        render();
+      });
+    }
+
+    function renderTagEditor(row) {
+      const group = splitGroupKey(state.selectedGroupKey);
+      const isNew = !row;
+      const data = row || {
+        field: group.field || "conversation",
+        tag: "",
+        category: group.category || "",
+        ru_label: "",
+        usage: "",
+        operator_selectable: "yes"
+      };
+      const fieldControl = isNew
+        ? '<input name="field" value="' + escapeHtml(data.field) + '" readonly>'
+        : [
+          '<select name="field">',
+          '<option value="conversation"' + selected(data.field, "conversation") + '>conversation</option>',
+          '<option value="user"' + selected(data.field, "user") + '>user</option>',
+          '</select>'
+        ].join("");
+      const categoryReadonly = isNew ? " readonly" : "";
+
+      els.editorTitle.textContent = isNew ? "Новый тег" : "Тег";
+      els.editorBody.innerHTML = [
+        '<form id="tagForm" class="form">',
+        '<div class="field"><label>Field</label>' + fieldControl + '</div>',
+        '<div class="field"><label>Tag</label><input id="tagInput" name="tag" value="' + escapeHtml(data.tag) + '" placeholder="issue.payment_failed" required></div>',
+        '<div class="field"><label>Category</label><input name="category" value="' + escapeHtml(data.category) + '"' + categoryReadonly + ' required></div>',
+        '<div class="field"><label>Русский label</label><input name="ru_label" value="' + escapeHtml(data.ru_label) + '" required></div>',
+        '<div class="field"><label>Usage</label><textarea name="usage" required>' + escapeHtml(data.usage) + '</textarea></div>',
+        '<div class="field"><label>Operator selectable</label><select name="operator_selectable">',
+        '<option value="yes"' + selected(data.operator_selectable, "yes") + '>yes</option>',
+        '<option value="no"' + selected(data.operator_selectable, "no") + '>no</option>',
+        '</select></div>',
+        '<div class="actions"><button class="primary" type="submit">' + (isNew ? "Создать тег" : "Сохранить тег") + '</button></div>',
+        isNew ? "" : [
+          '<div class="split-actions tag-actions">',
+          '<button id="copyTag" class="copy-tag-button" type="button">Копировать тег</button>',
+          '<button id="archiveTag" type="button">' + (data.operator_selectable === "yes" ? "Архивировать" : "Вернуть активным") + '</button>',
+          '<button id="deleteTag" class="danger" type="button">Удалить тег</button>',
+          '</div>'
+        ].join(""),
+        '</form>'
+      ].join("");
+
+      document.getElementById("tagForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = Object.fromEntries(new FormData(event.currentTarget));
+        if (!row && state.selectedGroupKey) {
+          const currentGroup = splitGroupKey(state.selectedGroupKey);
+          form.field = currentGroup.field;
+          form.category = currentGroup.category;
+        }
+        const next = makeRow(form, row ? row.id : null);
+        if (row) {
+          Object.assign(row, next);
+        } else {
+          state.rows.push(next);
+          state.selectedTagId = next.id;
+          state.search = "";
+          els.searchInput.value = "";
+        }
+        state.selectedGroupKey = groupKey(next.field, next.category);
+        state.editorMode = "tag";
+        render();
+      });
+
+      const copyButton = document.getElementById("copyTag");
+      if (copyButton && row) {
+        copyButton.addEventListener("click", async () => {
+          await copyTagToClipboard(row.tag, copyButton);
+        });
+      }
+
+      const archiveButton = document.getElementById("archiveTag");
+      if (archiveButton && row) {
+        archiveButton.addEventListener("click", () => {
+          row.operator_selectable = row.operator_selectable === "yes" ? "no" : "yes";
+          render();
+        });
+      }
+
+      const deleteButton = document.getElementById("deleteTag");
+      if (deleteButton && row) {
+        deleteButton.addEventListener("click", () => {
+          if (!confirm("Удалить тег " + row.tag + " из taxonomy?")) {
+            return;
+          }
+          state.rows = state.rows.filter(item => item.id !== row.id);
+          if (!getGroupRows(state.selectedGroupKey).length) {
+            const firstGroup = getGroups()[0];
+            state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+          }
+          state.selectedTagId = "";
+          state.editorMode = state.selectedGroupKey ? "group" : "empty";
+          render();
+        });
+      }
+    }
+
+    function selected(actual, expected) {
+      return actual === expected ? " selected" : "";
+    }
+
+    function makeRow(form, id) {
+      return {
+        id: id || makeId(),
+        field: normalizeText(form.field),
+        tag: normalizeText(form.tag),
+        category: normalizeText(form.category),
+        ru_label: normalizeText(form.ru_label),
+        usage: normalizeText(form.usage),
+        operator_selectable: normalizeText(form.operator_selectable || "yes")
+      };
+    }
+
+    function exportTaxonomy() {
+      const validation = validateRows();
+      if (validation.errors.length) {
+        alert("Экспорт заблокирован: исправьте ошибки валидации.");
+        return;
+      }
+      downloadCsv("helpdesk_tag_taxonomy.csv", state.rows, HEADERS);
+    }
+
+    function exportUserImport() {
+      const rows = state.rows
+        .filter(row => row.field === "user" && row.operator_selectable === "yes")
+        .map(row => pick(row, IMPORT_HEADERS));
+      downloadCsv("helpdesk_user_tags_import.csv", rows, IMPORT_HEADERS);
+    }
+
+    function exportConversationImport() {
+      const rows = state.rows
+        .filter(row => row.field === "conversation" && row.operator_selectable === "yes")
+        .map(row => pick(row, IMPORT_HEADERS));
+      downloadCsv("helpdesk_conversation_tags_import.csv", rows, IMPORT_HEADERS);
+    }
+
+    function pick(row, headers) {
+      const result = {};
+      headers.forEach(header => {
+        result[header] = row[header];
+      });
+      return result;
+    }
+
+    function exportAll() {
+      const validation = validateRows();
+      if (validation.errors.length) {
+        alert("Экспорт заблокирован: исправьте ошибки валидации.");
+        return;
+      }
+      exportTaxonomy();
+      exportUserImport();
+      exportConversationImport();
+    }
+
+    async function loadLocalTaxonomyIfAvailable() {
+      try {
+        const response = await fetch("helpdesk_tag_taxonomy.csv", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+        const text = await response.text();
+        const rows = parseCsv(text);
+        importRows(rows, "helpdesk_tag_taxonomy.csv");
+      } catch (error) {
+        render();
+      }
+    }
+
+    els.importButton.addEventListener("click", () => {
+      els.fileInput.click();
+    });
+
+    els.fileInput.addEventListener("change", async event => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) {
+        return;
+      }
+      try {
+        const text = await file.text();
+        importRows(parseCsv(text), file.name);
+      } catch (error) {
+        alert("Не удалось импортировать CSV: " + error.message);
+      } finally {
+        event.target.value = "";
+      }
+    });
+
+    els.searchInput.addEventListener("input", event => {
+      state.search = event.target.value.trim();
+      render();
+    });
+
+    els.newGroupButton.addEventListener("click", () => {
+      state.selectedTagId = "";
+      state.editorMode = "newGroup";
+      render();
+    });
+
+    els.newTagButton.addEventListener("click", () => {
+      state.selectedTagId = "";
+      state.editorMode = "newTag";
+      render();
+    });
+
+    els.clearSelectionButton.addEventListener("click", () => {
+      state.selectedTagId = "";
+      state.editorMode = state.selectedGroupKey ? "group" : "empty";
+      render();
+    });
+
+    els.exportTaxonomyButton.addEventListener("click", exportTaxonomy);
+    els.exportUserButton.addEventListener("click", exportUserImport);
+    els.exportConversationButton.addEventListener("click", exportConversationImport);
+    els.exportAllButton.addEventListener("click", exportAll);
+
+    render();
+    loadLocalTaxonomyIfAvailable();
+  </script>
+</body>
+</html>
