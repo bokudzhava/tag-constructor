@@ -53,6 +53,10 @@
     }
 
     button {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      justify-content: center;
       border: 1px solid var(--border);
       border-radius: 7px;
       background: var(--panel);
@@ -82,6 +86,24 @@
     .primary:hover:not(:disabled) {
       border-color: var(--accent-strong);
       background: var(--accent-strong);
+    }
+
+    .mode-button.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .button-icon {
+      width: 16px;
+      height: 16px;
+      flex: 0 0 auto;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
     }
 
     .danger {
@@ -162,6 +184,10 @@
       padding: 14px;
     }
 
+    .shell.macro-mode {
+      grid-template-columns: minmax(230px, 300px) minmax(440px, 1fr) minmax(520px, 50vw);
+    }
+
     .pane {
       min-width: 0;
       min-height: 0;
@@ -232,6 +258,11 @@
     .group-button.active {
       border-color: var(--accent);
       background: var(--accent-soft);
+    }
+
+    .group-button.no-macros {
+      border-style: dashed;
+      opacity: 0.76;
     }
 
     .group-name {
@@ -310,6 +341,22 @@
       gap: 10px;
     }
 
+    .macro-list {
+      display: block;
+      min-width: 0;
+    }
+
+    .macro-browser {
+      display: grid;
+      gap: 14px;
+    }
+
+    .macro-tag-filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 8px;
+    }
+
     .tag-card {
       display: grid;
       gap: 8px;
@@ -340,6 +387,240 @@
     .tag-card.archived {
       border-style: dashed;
       opacity: 0.72;
+    }
+
+    .tag-card.no-macros {
+      border-style: dashed;
+      background: #fff8eb;
+    }
+
+    .macro-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    .macro-card {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 8px;
+      height: 230px;
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 11px;
+      background: var(--panel);
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .macro-card:hover {
+      border-color: var(--border-strong);
+      background: var(--panel-soft);
+    }
+
+    .macro-card.active {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .macro-title {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 800;
+    }
+
+    .macro-tags,
+    .macro-tag-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .tag-combobox {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      min-height: 42px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 6px;
+    }
+
+    .tag-combobox:focus-within {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.15);
+    }
+
+    .tag-combobox .macro-tag-chips {
+      display: contents;
+    }
+
+    .field .tag-combobox input {
+      flex: 1 1 180px;
+      min-width: 160px;
+      min-height: 28px;
+      border: 0;
+      outline: 0;
+      padding: 3px 4px;
+      background: transparent;
+    }
+
+    .macro-preview {
+      min-height: 0;
+      color: var(--muted);
+      overflow: hidden;
+      white-space: pre-wrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 7;
+      -webkit-box-orient: vertical;
+    }
+
+    .chip-button {
+      border-radius: 999px;
+      min-height: 26px;
+      padding: 3px 9px;
+      color: var(--accent-strong);
+      border-color: #b8deda;
+      background: #f1fbf9;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .chip-button .remove-mark {
+      margin-left: 5px;
+      color: var(--danger);
+    }
+
+    .chip-button.warn {
+      color: var(--warning);
+      border-color: #ffd58f;
+      background: var(--warning-soft);
+    }
+
+    .autocomplete {
+      position: relative;
+    }
+
+    .suggestions {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      z-index: 8;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .suggestions:empty {
+      display: none;
+    }
+
+    .suggestion-button {
+      display: grid;
+      gap: 2px;
+      width: 100%;
+      min-height: 44px;
+      border: 0;
+      border-radius: 0;
+      padding: 8px 10px;
+      text-align: left;
+      background: var(--panel);
+    }
+
+    .suggestion-button:hover,
+    .suggestion-button.active {
+      background: var(--accent-soft);
+    }
+
+    .suggestion-main {
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .suggestion-meta {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .wysiwyg-shell {
+      display: grid;
+      gap: 8px;
+    }
+
+    .wysiwyg-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px;
+      background: var(--panel-soft);
+    }
+
+    .wysiwyg-toolbar button {
+      min-height: 30px;
+      padding: 4px 9px;
+      font-weight: 700;
+    }
+
+    .wysiwyg-editor,
+    .raw-markdown {
+      width: 100%;
+      min-height: 360px;
+      max-height: calc(100vh - 420px);
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 12px;
+    }
+
+    .wysiwyg-editor:focus,
+    .raw-markdown:focus {
+      border-color: var(--accent);
+      outline: 2px solid rgba(15, 118, 110, 0.15);
+    }
+
+    .wysiwyg-editor p,
+    .wysiwyg-editor h1,
+    .wysiwyg-editor h2,
+    .wysiwyg-editor h3,
+    .wysiwyg-editor ul {
+      margin: 0 0 10px;
+    }
+
+    .wysiwyg-editor code {
+      border-radius: 4px;
+      background: #eef2f2;
+      padding: 1px 4px;
+      font-family: "Cascadia Mono", Consolas, monospace;
+    }
+
+    .raw-markdown {
+      display: none;
+      resize: vertical;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      white-space: pre-wrap;
+    }
+
+    .raw-mode .wysiwyg-editor {
+      display: none;
+    }
+
+    .raw-mode .raw-markdown {
+      display: block;
     }
 
     .tag-top {
@@ -504,6 +785,10 @@
         grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr);
       }
 
+      .shell.macro-mode {
+        grid-template-columns: minmax(220px, 280px) minmax(360px, 1fr);
+      }
+
       .editor-pane {
         grid-column: 1 / -1;
       }
@@ -518,6 +803,10 @@
       .shell {
         grid-template-columns: 1fr;
         padding: 10px;
+      }
+
+      .shell.macro-mode {
+        grid-template-columns: 1fr;
       }
 
       .topbar {
@@ -549,15 +838,15 @@
       </div>
       <div class="toolbar">
         <input id="fileInput" class="hidden-input" type="file" accept=".csv,text/csv,text/plain,application/csv,application/vnd.ms-excel,application/octet-stream">
-        <button id="importButton" type="button">Импорт CSV</button>
-        <button id="exportTaxonomyButton" type="button">Taxonomy</button>
-        <button id="exportUserButton" type="button">User import</button>
-        <button id="exportConversationButton" type="button">Conversation import</button>
-        <button id="exportAllButton" class="primary" type="button">Скачать 3 CSV</button>
+        <button id="importButton" type="button">Импорт</button>
+        <button id="modeTagsButton" class="mode-button active" type="button">Tags</button>
+        <button id="modeMacrosButton" class="mode-button" type="button">Macros</button>
+        <button id="exportTagImportButton" type="button">Экспорт</button>
+        <button id="saveDownloadButton" class="primary" type="button">Save and Download</button>
       </div>
     </header>
 
-    <main class="shell">
+    <main id="shell" class="shell">
       <section class="pane">
         <div class="pane-header">
           <h2>Группы</h2>
@@ -599,23 +888,29 @@
     const TAG_PATTERN = /^[a-z0-9_]+(\.[a-z0-9_]+)+$/;
 
     const state = {
+      mode: "tags",
       rows: [],
+      macros: [],
       selectedGroupKey: "",
       selectedTagId: "",
+      selectedMacroId: "",
       editorMode: "empty",
       search: "",
       fileName: "",
-      nextId: 1
+      macroFileName: "",
+      nextId: 1,
+      nextMacroId: 1
     };
 
     const els = {
       fileStatus: document.getElementById("fileStatus"),
       fileInput: document.getElementById("fileInput"),
       importButton: document.getElementById("importButton"),
-      exportTaxonomyButton: document.getElementById("exportTaxonomyButton"),
-      exportUserButton: document.getElementById("exportUserButton"),
-      exportConversationButton: document.getElementById("exportConversationButton"),
-      exportAllButton: document.getElementById("exportAllButton"),
+      modeTagsButton: document.getElementById("modeTagsButton"),
+      modeMacrosButton: document.getElementById("modeMacrosButton"),
+      exportTagImportButton: document.getElementById("exportTagImportButton"),
+      saveDownloadButton: document.getElementById("saveDownloadButton"),
+      shell: document.getElementById("shell"),
       searchInput: document.getElementById("searchInput"),
       groupList: document.getElementById("groupList"),
       tagList: document.getElementById("tagList"),
@@ -636,6 +931,12 @@
     function makeId() {
       const id = "tag-" + state.nextId;
       state.nextId += 1;
+      return id;
+    }
+
+    function makeMacroId() {
+      const id = "macro-" + state.nextMacroId;
+      state.nextMacroId += 1;
       return id;
     }
 
@@ -661,6 +962,21 @@
 
     function getSelectedTag() {
       return state.rows.find(row => row.id === state.selectedTagId) || null;
+    }
+
+    function getSelectedMacro() {
+      return state.macros.find(macro => macro.id === state.selectedMacroId) || null;
+    }
+
+    function getKnownTags() {
+      return new Set(state.rows.map(row => row.tag).filter(Boolean));
+    }
+
+    function parseTagList(value) {
+      return Array.from(new Set(String(value || "")
+        .split(",")
+        .map(normalizeText)
+        .filter(Boolean)));
     }
 
     function parseCsv(text) {
@@ -755,12 +1071,64 @@
       URL.revokeObjectURL(url);
     }
 
+    function downloadText(fileName, text, type) {
+      const blob = new Blob([text], { type: type || "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
     function importRows(rows, fileName) {
       state.rows = rows;
       state.fileName = fileName || "helpdesk_tag_taxonomy.csv";
       state.selectedTagId = "";
+      state.selectedMacroId = "";
       const firstGroup = getGroups()[0];
       state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+      state.editorMode = state.selectedGroupKey ? "group" : "empty";
+      render();
+    }
+
+    function parseMacrosMarkdown(text) {
+      const normalized = String(text || "").replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+      const blocks = normalized.split(/^---\s*$/m).map(block => block.trim()).filter(Boolean);
+      return blocks.map((block, index) => {
+        const lines = block.split("\n");
+        const titleLine = normalizeText(lines.shift());
+        const tagLine = normalizeText(lines.shift());
+        if (!titleLine.startsWith("# ")) {
+          throw new Error("Макрос " + (index + 1) + ": заголовок должен начинаться с #.");
+        }
+        if (!tagLine.startsWith("[tag]")) {
+          throw new Error("Макрос " + (index + 1) + ": вторая строка должна начинаться с [tag].");
+        }
+        return {
+          id: makeMacroId(),
+          title: normalizeText(titleLine.replace(/^#+\s*/, "")),
+          tags: parseTagList(tagLine.replace(/^\[tag\]\s*/, "")),
+          body: lines.join("\n").trim()
+        };
+      });
+    }
+
+    function serializeMacrosMarkdown(macros) {
+      return macros.map(macro => [
+        "# " + normalizeText(macro.title),
+        "[tag] " + macro.tags.map(normalizeText).filter(Boolean).join(", "),
+        normalizeText(macro.body),
+        "---"
+      ].join("\n")).join("\n\n") + "\n";
+    }
+
+    function importMacros(macros, fileName) {
+      state.macros = macros;
+      state.macroFileName = fileName || "macros_markdown.txt";
+      state.selectedMacroId = "";
       state.editorMode = state.selectedGroupKey ? "group" : "empty";
       render();
     }
@@ -807,6 +1175,25 @@
       return Array.from(fields).sort(compareFields);
     }
 
+    function getMacroCountForTag(tag) {
+      return state.macros.filter(macro => macro.tags.includes(tag)).length;
+    }
+
+    function getGroupTagSet(key) {
+      return new Set(getGroupRows(key).map(row => row.tag).filter(Boolean));
+    }
+
+    function getMacroCountForGroup(key) {
+      if (!key) {
+        return state.macros.length;
+      }
+      const tags = getGroupTagSet(key);
+      if (!tags.size) {
+        return 0;
+      }
+      return state.macros.filter(macro => macro.tags.some(tag => tags.has(tag))).length;
+    }
+
     function compareFields(a, b) {
       const aIndex = CORE_FIELDS.indexOf(a);
       const bIndex = CORE_FIELDS.indexOf(b);
@@ -823,6 +1210,9 @@
     }
 
     function fieldTitle(field) {
+      if (field === "__all__") {
+        return "ALL";
+      }
       if (field === "user") {
         return "User Tags";
       }
@@ -900,6 +1290,41 @@
       return haystack.includes(state.search.toLowerCase());
     }
 
+    function macroMatchesSearch(macro) {
+      if (!state.search) {
+        return true;
+      }
+      const needle = state.search.toLowerCase();
+      const tagMatch = macro.tags.some(tag => tag.toLowerCase().includes(needle));
+      if (tagMatch) {
+        return true;
+      }
+      const haystack = [macro.title, macro.body].join(" ").toLowerCase();
+      return haystack.includes(needle);
+    }
+
+    function macroMatchesScope(macro) {
+      if (!state.selectedGroupKey && !state.selectedTagId) {
+        return true;
+      }
+      if (state.selectedTagId) {
+        const tag = getSelectedTag();
+        return tag ? macro.tags.includes(tag.tag) : true;
+      }
+      if (state.selectedGroupKey) {
+        const tags = getGroupTagSet(state.selectedGroupKey);
+        return !tags.size || macro.tags.some(tag => tags.has(tag));
+      }
+      return true;
+    }
+
+    function getVisibleMacros() {
+      return state.macros
+        .filter(macroMatchesScope)
+        .filter(macroMatchesSearch)
+        .sort((a, b) => a.title.localeCompare(b.title, "ru"));
+    }
+
     function groupMatchesSearch(group) {
       if (!state.search) {
         return true;
@@ -907,6 +1332,13 @@
       const ownText = [group.field, group.category].join(" ").toLowerCase();
       if (ownText.includes(state.search.toLowerCase())) {
         return true;
+      }
+      if (state.mode === "macros") {
+        const tags = getGroupTagSet(group.key);
+        if (Array.from(tags).some(tag => tag.toLowerCase().includes(state.search.toLowerCase()))) {
+          return true;
+        }
+        return state.macros.some(macro => macro.tags.some(tag => tags.has(tag)) && macroMatchesSearch(macro));
       }
       return getGroupRows(group.key).some(rowMatchesSearch);
     }
@@ -959,6 +1391,34 @@
       return { errors, warnings };
     }
 
+    function validateMacros() {
+      const errors = [];
+      const warnings = [];
+      const knownTags = getKnownTags();
+
+      state.macros.forEach((macro, index) => {
+        const number = index + 1;
+        if (!normalizeText(macro.title)) {
+          errors.push("Макрос " + number + ": пустой заголовок.");
+        }
+        if (!normalizeText(macro.body)) {
+          errors.push("Макрос " + number + ": пустое тело.");
+        }
+        if (!macro.tags.length) {
+          errors.push("Макрос " + number + ": нет тегов.");
+        }
+        macro.tags.forEach(tag => {
+          if (!TAG_PATTERN.test(tag)) {
+            errors.push("Макрос " + number + ": неверное имя тега " + tag + ".");
+          } else if (!knownTags.has(tag)) {
+            warnings.push("Макрос " + number + ": тег " + tag + " не найден в taxonomy.");
+          }
+        });
+      });
+
+      return { errors, warnings };
+    }
+
     function getStats(validation) {
       const activeUser = state.rows.filter(row => row.field === "user" && row.operator_selectable === "yes").length;
       const activeConversation = state.rows.filter(row => row.field === "conversation" && row.operator_selectable === "yes").length;
@@ -974,6 +1434,20 @@
       ];
     }
 
+    function getMacroStats(validation) {
+      const usedTags = new Set();
+      state.macros.forEach(macro => {
+        macro.tags.forEach(tag => usedTags.add(tag));
+      });
+      return [
+        { label: "Macros", value: state.macros.length },
+        { label: "Used tags", value: usedTags.size },
+        { label: "Visible", value: getVisibleMacros().length },
+        { label: "Errors", value: validation.errors.length },
+        { label: "Warnings", value: validation.warnings.length }
+      ];
+    }
+
     function escapeHtml(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -983,38 +1457,93 @@
         .replace(/'/g, "&#039;");
     }
 
+    function iconSvg(name) {
+      const icons = {
+        import: '<path d="M12 3v12"></path><path d="m7 8 5-5 5 5"></path><path d="M4 15v3a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-3"></path>',
+        export: '<path d="M12 21V9"></path><path d="m17 16-5 5-5-5"></path><path d="M4 9V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"></path>',
+        tags: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"></path><path d="M7.5 7.5h.01"></path>',
+        macros: '<path d="M8 7H5a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h3"></path><path d="M16 7h3a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-3"></path><path d="M8 17h8"></path><path d="M8 12h8"></path>',
+        save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path>'
+      };
+      return '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">' + (icons[name] || "") + '</svg>';
+    }
+
+    function setButtonContent(button, icon, label) {
+      button.innerHTML = iconSvg(icon) + '<span>' + escapeHtml(label) + '</span>';
+    }
+
     function render() {
       const validation = validateRows();
+      const macroValidation = validateMacros();
       const hasErrors = validation.errors.length > 0;
       const hasRows = state.rows.length > 0;
+      const hasMacros = state.macros.length > 0;
+      const hasMacroErrors = macroValidation.errors.length > 0;
 
-      els.fileStatus.textContent = hasRows
-        ? state.fileName + " | " + state.rows.length + " строк"
-        : "CSV не загружен";
+      els.fileStatus.textContent = state.mode === "tags"
+        ? (hasRows ? state.fileName + " | " + state.rows.length + " строк" : "CSV не загружен")
+        : [
+          hasRows ? "taxonomy: " + state.rows.length + " строк" : "taxonomy не загружена",
+          hasMacros ? (state.macroFileName + " | " + state.macros.length + " макросов") : "macros не загружены"
+        ].join(" | ");
 
-      [
-        els.exportTaxonomyButton,
-        els.exportUserButton,
-        els.exportConversationButton,
-        els.exportAllButton
-      ].forEach(button => {
-        button.disabled = !hasRows || hasErrors;
-      });
+      els.modeTagsButton.classList.toggle("active", state.mode === "tags");
+      els.modeMacrosButton.classList.toggle("active", state.mode === "macros");
+      els.shell.classList.toggle("macro-mode", state.mode === "macros");
+      els.tagList.className = state.mode === "macros" ? "macro-list" : "tag-grid";
+      els.saveDownloadButton.disabled = state.mode === "tags" ? (!hasRows || hasErrors) : (!hasMacros || hasMacroErrors);
+      els.exportTagImportButton.style.display = state.mode === "tags" ? "" : "none";
+      els.exportTagImportButton.disabled = !hasRows || hasErrors;
+      setButtonContent(els.importButton, "import", "Импорт");
+      setButtonContent(els.modeTagsButton, "tags", "Tags");
+      setButtonContent(els.modeMacrosButton, "macros", "Macros");
+      setButtonContent(els.exportTagImportButton, "export", "Экспорт");
+      setButtonContent(els.saveDownloadButton, "save", "Save and Download");
+      els.fileInput.accept = state.mode === "tags"
+        ? ".csv,text/csv,text/plain,application/csv,application/vnd.ms-excel,application/octet-stream"
+        : ".txt,.md,text/plain,text/markdown";
+      els.searchInput.placeholder = state.mode === "tags"
+        ? "Поиск по tag, label, usage или category"
+        : "Поиск по тегам, названию или тексту макроса";
+      els.newGroupButton.style.display = state.mode === "tags" ? "" : "none";
+      els.newTagButton.textContent = state.mode === "tags" ? "+ Тег" : "+ Макрос";
 
-      renderStats(validation);
-      renderValidation(validation);
+      renderStats(state.mode === "tags" ? validation : macroValidation);
+      renderValidation(state.mode === "tags" ? validation : macroValidation);
       renderGroups();
       renderTags();
       renderEditor();
     }
 
     function renderStats(validation) {
-      els.stats.innerHTML = getStats(validation).map(item => (
+      const stats = state.mode === "tags" ? getStats(validation) : getMacroStats(validation);
+      els.stats.innerHTML = stats.map(item => (
         '<div class="stat"><strong>' + item.value + '</strong><span>' + escapeHtml(item.label) + '</span></div>'
       )).join("");
     }
 
     function renderValidation(validation) {
+      if (state.mode === "macros") {
+        if (!state.macros.length) {
+          els.validationBox.innerHTML = '<div class="message">Загрузите macros_markdown.txt, чтобы начать редактирование макросов.</div>';
+          return;
+        }
+        if (validation.errors.length) {
+          const items = validation.errors.slice(0, 6).map(error => '<li>' + escapeHtml(error) + '</li>').join("");
+          const more = validation.errors.length > 6 ? '<li>Еще ошибок: ' + (validation.errors.length - 6) + '.</li>' : "";
+          els.validationBox.innerHTML = '<div class="message error"><strong>Экспорт макросов заблокирован.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+          return;
+        }
+        if (validation.warnings.length) {
+          const items = validation.warnings.slice(0, 4).map(warning => '<li>' + escapeHtml(warning) + '</li>').join("");
+          const more = validation.warnings.length > 4 ? '<li>Еще предупреждений: ' + (validation.warnings.length - 4) + '.</li>' : "";
+          els.validationBox.innerHTML = '<div class="message warning"><strong>Можно экспортировать, есть неизвестные теги.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+          return;
+        }
+        els.validationBox.innerHTML = '<div class="message"><strong>Проверка макросов пройдена.</strong> Можно экспортировать macros_markdown.txt.</div>';
+        return;
+      }
+
       if (!state.rows.length) {
         els.validationBox.innerHTML = '<div class="message">Загрузите helpdesk_tag_taxonomy.csv, чтобы начать редактирование.</div>';
         return;
@@ -1039,7 +1568,7 @@
 
     function renderGroups() {
       const groups = getGroups().filter(groupMatchesSearch);
-      if (!groups.length) {
+      if (!groups.length && state.mode !== "macros") {
         els.groupList.innerHTML = '<div class="empty">Группы не найдены.</div>';
         return;
       }
@@ -1048,19 +1577,36 @@
         .sort(compareFields)
         .map(field => ({ field, title: fieldTitle(field) }));
 
-      els.groupList.innerHTML = sections.map(section => {
+      const allSection = state.mode === "macros"
+        ? [
+          '<div><div class="group-section-title">ALL</div><div class="group-list">',
+          '<button class="group-button' + (!state.selectedGroupKey && !state.selectedTagId ? " active" : "") + '" type="button" data-all-macros="1">',
+          '<span><span class="group-name">all</span><span class="group-meta">все макросы</span></span>',
+          '<span class="count-pill">' + state.macros.length + '</span>',
+          '</button>',
+          '</div></div>'
+        ].join("")
+        : "";
+
+      const groupSections = sections.map(section => {
         const sectionGroups = groups.filter(group => group.field === section.field);
         if (!sectionGroups.length) {
           return "";
         }
         const list = sectionGroups.map(group => {
           const isActive = group.key === state.selectedGroupKey ? " active" : "";
+          const macroCount = state.mode === "macros" ? getMacroCountForGroup(group.key) : 0;
+          const noMacros = state.mode === "macros" && macroCount === 0 ? " no-macros" : "";
           const archivedText = group.archived ? " | архив: " + group.archived : "";
+          const metaText = state.mode === "macros"
+            ? escapeHtml(group.field) + " | тегов: " + group.total
+            : escapeHtml(group.field) + archivedText;
+          const countText = state.mode === "macros" ? macroCount : (group.active + '/' + group.total);
           return [
-            '<button class="group-button' + isActive + '" type="button" data-group="' + escapeHtml(group.key) + '">',
+            '<button class="group-button' + isActive + noMacros + '" type="button" data-group="' + escapeHtml(group.key) + '">',
             '<span><span class="group-name">' + escapeHtml(group.category) + '</span>',
-            '<span class="group-meta">' + escapeHtml(group.field) + archivedText + '</span></span>',
-            '<span class="count-pill">' + group.active + '/' + group.total + '</span>',
+            '<span class="group-meta">' + metaText + '</span></span>',
+            '<span class="count-pill">' + countText + '</span>',
             '</button>'
           ].join("");
         }).join("");
@@ -1068,10 +1614,23 @@
         return '<div><div class="group-section-title">' + section.title + '</div><div class="group-list">' + list + '</div></div>';
       }).join("");
 
+      els.groupList.innerHTML = allSection + groupSections;
+
+      els.groupList.querySelectorAll("[data-all-macros]").forEach(button => {
+        button.addEventListener("click", () => {
+          state.selectedGroupKey = "";
+          state.selectedTagId = "";
+          state.selectedMacroId = "";
+          state.editorMode = "group";
+          render();
+        });
+      });
+
       els.groupList.querySelectorAll("[data-group]").forEach(button => {
         button.addEventListener("click", () => {
           state.selectedGroupKey = button.getAttribute("data-group");
           state.selectedTagId = "";
+          state.selectedMacroId = "";
           state.editorMode = "group";
           render();
         });
@@ -1079,6 +1638,11 @@
     }
 
     function renderTags() {
+      if (state.mode === "macros") {
+        renderMacrosBrowser();
+        return;
+      }
+
       const group = splitGroupKey(state.selectedGroupKey);
       const rows = getGroupRows(state.selectedGroupKey).filter(rowMatchesSearch).sort((a, b) => a.tag.localeCompare(b.tag));
 
@@ -1133,6 +1697,93 @@
 
     }
 
+    function renderMacrosBrowser() {
+      const group = splitGroupKey(state.selectedGroupKey);
+      const rows = getGroupRows(state.selectedGroupKey).sort((a, b) => a.tag.localeCompare(b.tag));
+      const macros = getVisibleMacros();
+
+      els.newTagButton.disabled = !state.macros.length;
+      els.tagPaneTitle.textContent = state.selectedTagId
+        ? "Макросы: " + (getSelectedTag() ? getSelectedTag().tag : "тег")
+        : (state.selectedGroupKey ? "Макросы: " + group.field + " / " + group.category : "Макросы: ALL / all");
+
+      if (!state.macros.length) {
+        els.tagList.innerHTML = '<div class="empty">Загрузите macros_markdown.txt через импорт или дождитесь локальной автозагрузки.</div>';
+        return;
+      }
+
+      const tagFilters = state.selectedGroupKey
+        ? rows.map(row => {
+          const active = row.id === state.selectedTagId ? " active" : "";
+          const count = getMacroCountForTag(row.tag);
+          const noMacros = count === 0 ? " no-macros" : "";
+          return [
+            '<div class="tag-card' + active + noMacros + '" role="button" tabindex="0" data-tag-id="' + escapeHtml(row.id) + '">',
+            '<span class="tag-top"><span class="tag-code">' + escapeHtml(row.tag) + '</span><span class="badge ' + (count ? "ok" : "warn") + '">' + (count ? count + " макр." : "нет макроса") + '</span></span>',
+            '<span class="tag-label">' + escapeHtml(row.ru_label) + '</span>',
+            '</div>'
+          ].join("");
+        }).join("")
+        : '<div class="message">Показаны все макросы. Выберите группу или тег слева, чтобы сузить список.</div>';
+
+      const macroCards = macros.length
+        ? macros.map(macro => {
+          const active = macro.id === state.selectedMacroId ? " active" : "";
+          const tags = macro.tags.map(tag => '<span class="badge ' + (getKnownTags().has(tag) ? "ok" : "warn") + '">' + escapeHtml(tag) + '</span>').join("");
+          return [
+            '<div class="macro-card' + active + '" role="button" tabindex="0" data-macro-id="' + escapeHtml(macro.id) + '">',
+            '<span class="macro-title">' + escapeHtml(macro.title) + '</span>',
+            '<span class="macro-tags">' + tags + '</span>',
+            '<span class="macro-preview">' + escapeHtml(macro.body) + '</span>',
+            '</div>'
+          ].join("");
+        }).join("")
+        : '<div class="empty">По выбранному фильтру макросов нет.</div>';
+
+      els.tagList.innerHTML = [
+        '<div class="macro-browser">',
+        '<div class="macro-tag-filters">' + tagFilters + '</div>',
+        '<div class="macro-grid">' + macroCards + '</div>',
+        '</div>'
+      ].join("");
+
+      els.tagList.querySelectorAll("[data-tag-id]").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.selectedMacroId = "";
+          state.editorMode = "group";
+          render();
+        });
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
+          event.preventDefault();
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.selectedMacroId = "";
+          state.editorMode = "group";
+          render();
+        });
+      });
+
+      els.tagList.querySelectorAll("[data-macro-id]").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedMacroId = card.getAttribute("data-macro-id");
+          state.editorMode = "macro";
+          render();
+        });
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
+          event.preventDefault();
+          state.selectedMacroId = card.getAttribute("data-macro-id");
+          state.editorMode = "macro";
+          render();
+        });
+      });
+    }
+
     function createTagCopy(source) {
       const row = {
         id: makeId(),
@@ -1179,6 +1830,11 @@
     }
 
     function renderEditor() {
+      if (state.mode === "macros") {
+        renderMacroEditor();
+        return;
+      }
+
       if (state.editorMode === "newGroup") {
         renderNewGroupEditor();
         return;
@@ -1201,6 +1857,490 @@
 
       els.editorTitle.textContent = "Редактор";
       els.editorBody.innerHTML = '<div class="empty">Загрузите CSV и выберите группу или тег.</div>';
+    }
+
+    function renderMacroEditor() {
+      if (state.editorMode === "newMacro") {
+        const selectedTag = getSelectedTag();
+        renderMacroForm(null, {
+          title: "",
+          tags: selectedTag ? [selectedTag.tag] : [],
+          body: ""
+        });
+        return;
+      }
+
+      if (state.editorMode === "macro") {
+        renderMacroForm(getSelectedMacro());
+        return;
+      }
+
+      const scopedMacros = getVisibleMacros();
+      const selectedTag = getSelectedTag();
+      els.editorTitle.textContent = selectedTag ? "Тег макросов" : (state.selectedGroupKey ? "Группа макросов" : "Все макросы");
+      els.editorBody.innerHTML = [
+        '<div class="form">',
+        '<div class="message">Отображается макросов: ' + scopedMacros.length + '. Всего загружено: ' + state.macros.length + '.</div>',
+        selectedTag ? '<div class="message ' + (getMacroCountForTag(selectedTag.tag) ? '' : 'warning') + '"><strong>' + escapeHtml(selectedTag.tag) + '</strong>: ' + (getMacroCountForTag(selectedTag.tag) ? getMacroCountForTag(selectedTag.tag) + ' макросов.' : 'нет макроса') + '</div>' : '',
+        '<div class="actions"><button id="createMacroFromEditor" class="primary" type="button">Создать макрос</button></div>',
+        '</div>'
+      ].join("");
+
+      const createButton = document.getElementById("createMacroFromEditor");
+      if (createButton) {
+        createButton.addEventListener("click", () => {
+          state.selectedMacroId = "";
+          state.editorMode = "newMacro";
+          render();
+        });
+      }
+    }
+
+    function renderMacroForm(macro, draft) {
+      const isNew = !macro;
+      const data = macro || draft || { title: "", tags: [], body: "" };
+      const knownTags = getKnownTags();
+      const tagBadges = data.tags.map(tag => {
+        const badgeClass = knownTags.has(tag) ? "ok" : "warn";
+        return '<span class="badge ' + badgeClass + '">' + escapeHtml(tag) + '</span>';
+      }).join("");
+
+      els.editorTitle.textContent = isNew ? "Новый макрос" : "Макрос";
+      els.editorBody.innerHTML = [
+        '<form id="macroForm" class="form">',
+        '<div class="field"><label>Название</label><input name="title" value="' + escapeHtml(data.title) + '" required></div>',
+        '<div class="field autocomplete"><label>Теги</label><div class="tag-combobox"><div id="macroSelectedTags" class="macro-tag-chips">' + tagBadges + '</div><input id="macroTagSearch" type="search" placeholder="Начните вводить тег или label" autocomplete="off"></div><input id="macroTagsInput" name="tags" type="hidden" value="' + escapeHtml(data.tags.join(", ")) + '"><div id="macroTagSuggestions" class="suggestions"></div></div>',
+        renderWysiwygEditor(data.body),
+        '<div class="actions"><button class="primary" type="submit">' + (isNew ? "Создать макрос" : "Сохранить макрос") + '</button></div>',
+        isNew ? "" : [
+          '<div class="split-actions tag-actions">',
+          '<button id="copyMacro" class="copy-tag-button" type="button">Копировать макрос</button>',
+          '<button id="deleteMacro" class="danger" type="button">Удалить макрос</button>',
+          '</div>'
+        ].join(""),
+        '</form>'
+      ].join("");
+
+      setupMacroTagControls();
+      setupWysiwygEditor();
+
+      document.getElementById("macroForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = Object.fromEntries(new FormData(event.currentTarget));
+        const body = getMacroEditorMarkdown();
+        if (!body) {
+          alert("Markdown не может быть пустым.");
+          return;
+        }
+        const tags = parseTagList(form.tags);
+        if (!tags.length) {
+          alert("Добавьте хотя бы один тег.");
+          return;
+        }
+        const next = {
+          id: macro ? macro.id : makeMacroId(),
+          title: normalizeText(form.title),
+          tags,
+          body
+        };
+        if (macro) {
+          Object.assign(macro, next);
+        } else {
+          state.macros.push(next);
+          state.selectedMacroId = next.id;
+        }
+        state.editorMode = "macro";
+        render();
+      });
+
+      const copyButton = document.getElementById("copyMacro");
+      if (copyButton && macro) {
+        copyButton.addEventListener("click", () => {
+          createMacroCopy(macro);
+        });
+      }
+
+      const deleteButton = document.getElementById("deleteMacro");
+      if (deleteButton && macro) {
+        deleteButton.addEventListener("click", () => {
+          if (!confirm("Удалить макрос " + macro.title + "?")) {
+            return;
+          }
+          state.macros = state.macros.filter(item => item.id !== macro.id);
+          state.selectedMacroId = "";
+          state.editorMode = "group";
+          render();
+        });
+      }
+    }
+
+    function renderWysiwygEditor(markdown) {
+      return [
+        '<div id="macroWysiwygShell" class="field wysiwyg-shell">',
+        '<label>Markdown</label>',
+        '<div class="wysiwyg-toolbar" aria-label="Markdown toolbar">',
+        '<button type="button" data-format="bold">B</button>',
+        '<button type="button" data-format="italic">I</button>',
+        '<button type="button" data-format="heading2">H2</button>',
+        '<button type="button" data-format="heading3">H3</button>',
+        '<button type="button" data-format="bullet">• List</button>',
+        '<button type="button" data-format="link">Link</button>',
+        '<button type="button" data-format="code">Code</button>',
+        '<button type="button" data-format="raw">Raw</button>',
+        '</div>',
+        '<div id="macroBodyEditor" class="wysiwyg-editor" contenteditable="true">' + markdownToEditorHtml(markdown) + '</div>',
+        '<textarea id="macroRawBody" class="raw-markdown">' + escapeHtml(markdown) + '</textarea>',
+        '</div>'
+      ].join("");
+    }
+
+    function setupWysiwygEditor() {
+      const shell = document.getElementById("macroWysiwygShell");
+      const editor = document.getElementById("macroBodyEditor");
+      const raw = document.getElementById("macroRawBody");
+      if (!shell || !editor || !raw) {
+        return;
+      }
+
+      shell.querySelectorAll("[data-format]").forEach(button => {
+        button.addEventListener("click", () => {
+          const format = button.getAttribute("data-format");
+          if (format === "raw") {
+            if (shell.classList.contains("raw-mode")) {
+              editor.innerHTML = markdownToEditorHtml(raw.value);
+              shell.classList.remove("raw-mode");
+              editor.focus();
+            } else {
+              raw.value = editorHtmlToMarkdown(editor);
+              shell.classList.add("raw-mode");
+              raw.focus();
+            }
+            return;
+          }
+
+          if (shell.classList.contains("raw-mode")) {
+            return;
+          }
+          applyWysiwygFormat(format);
+          editor.focus();
+        });
+      });
+    }
+
+    function applyWysiwygFormat(format) {
+      if (format === "bold") {
+        document.execCommand("bold", false, null);
+        return;
+      }
+      if (format === "italic") {
+        document.execCommand("italic", false, null);
+        return;
+      }
+      if (format === "heading2") {
+        document.execCommand("formatBlock", false, "h2");
+        return;
+      }
+      if (format === "heading3") {
+        document.execCommand("formatBlock", false, "h3");
+        return;
+      }
+      if (format === "bullet") {
+        document.execCommand("insertUnorderedList", false, null);
+        return;
+      }
+      if (format === "link") {
+        const url = normalizeText(prompt("URL для ссылки"));
+        if (url) {
+          document.execCommand("createLink", false, url);
+        }
+        return;
+      }
+      if (format === "code") {
+        const selection = window.getSelection();
+        const text = selection && selection.toString() ? selection.toString() : "code";
+        document.execCommand("insertHTML", false, "<code>" + escapeHtml(text) + "</code>");
+      }
+    }
+
+    function markdownToEditorHtml(markdown) {
+      const lines = String(markdown || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+      const html = [];
+      let inList = false;
+      const closeList = () => {
+        if (inList) {
+          html.push("</ul>");
+          inList = false;
+        }
+      };
+
+      lines.forEach(line => {
+        if (/^\s*[-*]\s+/.test(line)) {
+          if (!inList) {
+            html.push("<ul>");
+            inList = true;
+          }
+          html.push("<li>" + markdownInlineToHtml(line.replace(/^\s*[-*]\s+/, "")) + "</li>");
+          return;
+        }
+
+        closeList();
+        if (!normalizeText(line)) {
+          html.push("<p><br></p>");
+        } else if (line.startsWith("### ")) {
+          html.push("<h3>" + markdownInlineToHtml(line.slice(4)) + "</h3>");
+        } else if (line.startsWith("## ")) {
+          html.push("<h2>" + markdownInlineToHtml(line.slice(3)) + "</h2>");
+        } else if (line.startsWith("# ")) {
+          html.push("<h2>" + markdownInlineToHtml(line.slice(2)) + "</h2>");
+        } else {
+          html.push("<p>" + markdownInlineToHtml(line) + "</p>");
+        }
+      });
+      closeList();
+      return html.join("");
+    }
+
+    function markdownInlineToHtml(value) {
+      let html = escapeHtml(value);
+      html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+      html = html.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      html = html.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      return html;
+    }
+
+    function getMacroEditorMarkdown() {
+      const shell = document.getElementById("macroWysiwygShell");
+      const editor = document.getElementById("macroBodyEditor");
+      const raw = document.getElementById("macroRawBody");
+      if (!shell || !editor || !raw) {
+        return "";
+      }
+      return normalizeText(shell.classList.contains("raw-mode") ? raw.value : editorHtmlToMarkdown(editor));
+    }
+
+    function editorHtmlToMarkdown(root) {
+      const blocks = [];
+      Array.from(root.childNodes).forEach(node => {
+        const markdown = blockNodeToMarkdown(node);
+        if (markdown !== null) {
+          blocks.push(markdown);
+        }
+      });
+      return blocks.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+    }
+
+    function blockNodeToMarkdown(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return normalizeText(node.textContent);
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return null;
+      }
+
+      const name = node.nodeName.toLowerCase();
+      if (name === "h1" || name === "h2") {
+        return "## " + inlineNodesToMarkdown(node);
+      }
+      if (name === "h3") {
+        return "### " + inlineNodesToMarkdown(node);
+      }
+      if (name === "ul") {
+        return Array.from(node.children)
+          .filter(child => child.nodeName.toLowerCase() === "li")
+          .map(child => "- " + inlineNodesToMarkdown(child))
+          .join("\n");
+      }
+      if (name === "ol") {
+        return Array.from(node.children)
+          .filter(child => child.nodeName.toLowerCase() === "li")
+          .map((child, index) => (index + 1) + ". " + inlineNodesToMarkdown(child))
+          .join("\n");
+      }
+      if (name === "div" || name === "p") {
+        const text = inlineNodesToMarkdown(node);
+        return text || "";
+      }
+      if (name === "br") {
+        return "";
+      }
+      return inlineNodesToMarkdown(node);
+    }
+
+    function inlineNodesToMarkdown(node) {
+      return Array.from(node.childNodes).map(inlineNodeToMarkdown).join("").replace(/\u00a0/g, " ").trim();
+    }
+
+    function inlineNodeToMarkdown(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || "";
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) {
+        return "";
+      }
+
+      const name = node.nodeName.toLowerCase();
+      const text = inlineNodesToMarkdown(node);
+      if (name === "strong" || name === "b") {
+        return text ? "**" + text + "**" : "";
+      }
+      if (name === "em" || name === "i") {
+        return text ? "*" + text + "*" : "";
+      }
+      if (name === "code") {
+        return text ? "`" + text.replace(/`/g, "") + "`" : "";
+      }
+      if (name === "a") {
+        const href = node.getAttribute("href") || "";
+        return href ? "[" + text + "](" + href + ")" : text;
+      }
+      if (name === "br") {
+        return "\n";
+      }
+      return text;
+    }
+
+    function setupMacroTagControls() {
+      const input = document.getElementById("macroTagsInput");
+      const search = document.getElementById("macroTagSearch");
+      const suggestions = document.getElementById("macroTagSuggestions");
+      const chips = document.getElementById("macroSelectedTags");
+      if (!input || !search || !suggestions || !chips) {
+        return;
+      }
+
+      const renderChips = () => {
+        const tags = parseTagList(input.value);
+        const knownTags = getKnownTags();
+        chips.innerHTML = tags.map(tag => {
+          const badgeClass = knownTags.has(tag) ? "ok" : "warn";
+          return '<button class="chip-button ' + badgeClass + '" type="button" data-remove-tag="' + escapeHtml(tag) + '">' + escapeHtml(tag) + '<span class="remove-mark">×</span></button>';
+        }).join("");
+        chips.querySelectorAll("[data-remove-tag]").forEach(button => {
+          button.addEventListener("click", () => {
+            const removeTag = button.getAttribute("data-remove-tag");
+            input.value = parseTagList(input.value).filter(tag => tag !== removeTag).join(", ");
+            renderChips();
+          });
+        });
+      };
+
+      const setTags = tags => {
+        input.value = Array.from(new Set(tags.map(normalizeText).filter(Boolean))).join(", ");
+        renderChips();
+      };
+
+      const addMacroTag = tag => {
+        const normalizedTag = normalizeText(tag);
+        if (!normalizedTag) {
+          return;
+        }
+        const tags = parseTagList(input.value);
+        if (!tags.includes(normalizedTag)) {
+          tags.push(normalizedTag);
+          setTags(tags);
+        }
+        search.value = "";
+        suggestions.innerHTML = "";
+      };
+
+      const renderSuggestions = () => {
+        const matches = getTagSuggestions(search.value, parseTagList(input.value));
+        suggestions.innerHTML = matches.map((row, index) => [
+          '<button class="suggestion-button' + (index === 0 ? " active" : "") + '" type="button" data-suggest-tag="' + escapeHtml(row.tag) + '">',
+          '<span class="suggestion-main">' + escapeHtml(row.tag) + '</span>',
+          '<span class="suggestion-meta">' + escapeHtml(row.field + " / " + row.category + " / " + row.ru_label) + '</span>',
+          '</button>'
+        ].join("")).join("");
+        suggestions.querySelectorAll("[data-suggest-tag]").forEach(button => {
+          button.addEventListener("click", () => {
+            addMacroTag(button.getAttribute("data-suggest-tag"));
+          });
+        });
+      };
+
+      input.addEventListener("input", renderChips);
+      search.addEventListener("input", () => {
+        if (search.value.includes(",")) {
+          const parts = search.value.split(",");
+          const completeTags = parts.slice(0, -1).map(normalizeText).filter(Boolean);
+          if (completeTags.length) {
+            setTags(parseTagList(input.value).concat(completeTags));
+          }
+          search.value = parts[parts.length - 1].trim();
+        }
+        renderSuggestions();
+      });
+      search.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== ",") {
+          return;
+        }
+        const first = suggestions.querySelector("[data-suggest-tag]");
+        const typedTag = normalizeText(search.value);
+        if (!first && !typedTag) {
+          return;
+        }
+        event.preventDefault();
+        addMacroTag(first ? first.getAttribute("data-suggest-tag") : typedTag);
+      });
+      search.addEventListener("blur", () => {
+        window.setTimeout(() => {
+          suggestions.innerHTML = "";
+        }, 150);
+      });
+      renderChips();
+    }
+
+    function getTagSuggestions(query, excludedTags) {
+      const needle = normalizeText(query).toLowerCase();
+      if (!needle) {
+        return [];
+      }
+      const excluded = new Set((excludedTags || []).map(normalizeText).filter(Boolean));
+      return state.rows
+        .filter(row => {
+          if (row.operator_selectable !== "yes" || excluded.has(row.tag)) {
+            return false;
+          }
+          const haystack = [row.tag, row.ru_label, row.category, row.field].join(" ").toLowerCase();
+          return haystack.includes(needle);
+        })
+        .sort((a, b) => {
+          const aStarts = a.tag.toLowerCase().startsWith(needle) ? 0 : 1;
+          const bStarts = b.tag.toLowerCase().startsWith(needle) ? 0 : 1;
+          if (aStarts !== bStarts) {
+            return aStarts - bStarts;
+          }
+          return a.tag.localeCompare(b.tag);
+        })
+        .slice(0, 12);
+    }
+
+    function createMacroCopy(source) {
+      const macro = {
+        id: makeMacroId(),
+        title: makeCopiedMacroTitle(source.title),
+        tags: source.tags.slice(),
+        body: source.body
+      };
+      state.macros.push(macro);
+      state.selectedMacroId = macro.id;
+      state.editorMode = "macro";
+      state.search = "";
+      els.searchInput.value = "";
+      render();
+    }
+
+    function makeCopiedMacroTitle(title) {
+      const base = normalizeText(title) || "Макрос";
+      const existing = new Set(state.macros.map(macro => macro.title));
+      let index = 1;
+      let candidate = base + " copy";
+      while (existing.has(candidate)) {
+        index += 1;
+        candidate = base + " copy " + index;
+      }
+      return candidate;
     }
 
     function renderGroupEditor() {
@@ -1453,6 +2593,29 @@
       downloadCsv("helpdesk_conversation_tags_import.csv", rows, IMPORT_HEADERS);
     }
 
+    function serializeTagImportList(rows) {
+      const tags = Array.from(new Set(rows
+        .filter(row => row.operator_selectable === "yes")
+        .map(row => normalizeText(row.tag))
+        .filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b));
+      return "\uFEFF" + tags.join("\r\n") + "\r\n";
+    }
+
+    function exportTagImportCsv() {
+      const validation = validateRows();
+      if (validation.errors.length) {
+        alert("Экспорт заблокирован: исправьте ошибки валидации.");
+        return;
+      }
+      const text = serializeTagImportList(state.rows);
+      if (!text.trim()) {
+        alert("Нет активных тегов для экспорта.");
+        return;
+      }
+      downloadText("helpdesk_tags_import.csv", text, "text/csv;charset=utf-8");
+    }
+
     function pick(row, headers) {
       const result = {};
       headers.forEach(header => {
@@ -1472,6 +2635,23 @@
       exportConversationImport();
     }
 
+    function exportMacros() {
+      const validation = validateMacros();
+      if (validation.errors.length) {
+        alert("Экспорт макросов заблокирован: исправьте ошибки валидации.");
+        return;
+      }
+      downloadText("macros_markdown.txt", serializeMacrosMarkdown(state.macros), "text/plain;charset=utf-8");
+    }
+
+    function saveAndDownload() {
+      if (state.mode === "macros") {
+        exportMacros();
+        return;
+      }
+      exportTaxonomy();
+    }
+
     async function loadLocalTaxonomyIfAvailable() {
       try {
         const response = await fetch("helpdesk_tag_taxonomy.csv", { cache: "no-store" });
@@ -1481,6 +2661,21 @@
         const text = await response.text();
         const rows = parseCsv(text);
         importRows(rows, "helpdesk_tag_taxonomy.csv");
+      } catch (error) {
+        render();
+      }
+    }
+
+    async function loadLocalMacrosIfAvailable() {
+      try {
+        const response = await fetch("macros_markdown.txt", { cache: "no-store" });
+        if (!response.ok) {
+          return;
+        }
+        const text = await response.text();
+        state.macros = parseMacrosMarkdown(text);
+        state.macroFileName = "macros_markdown.txt";
+        render();
       } catch (error) {
         render();
       }
@@ -1509,9 +2704,13 @@
       }
       try {
         const text = await readFileAsText(file);
-        importRows(parseCsv(text), file.name);
+        if (state.mode === "macros") {
+          importMacros(parseMacrosMarkdown(text), file.name);
+        } else {
+          importRows(parseCsv(text), file.name);
+        }
       } catch (error) {
-        alert("Не удалось импортировать CSV: " + error.message);
+        alert("Не удалось импортировать файл: " + error.message);
       } finally {
         event.target.value = "";
       }
@@ -1523,30 +2722,55 @@
     });
 
     els.newGroupButton.addEventListener("click", () => {
+      if (state.mode !== "tags") {
+        return;
+      }
       state.selectedTagId = "";
+      state.selectedMacroId = "";
       state.editorMode = "newGroup";
       render();
     });
 
     els.newTagButton.addEventListener("click", () => {
-      state.selectedTagId = "";
-      state.editorMode = "newTag";
+      if (state.mode === "macros") {
+        state.selectedMacroId = "";
+        state.editorMode = "newMacro";
+      } else {
+        state.selectedTagId = "";
+        state.selectedMacroId = "";
+        state.editorMode = "newTag";
+      }
       render();
     });
 
     els.clearSelectionButton.addEventListener("click", () => {
       state.selectedTagId = "";
+      state.selectedMacroId = "";
       state.editorMode = state.selectedGroupKey ? "group" : "empty";
       render();
     });
 
-    els.exportTaxonomyButton.addEventListener("click", exportTaxonomy);
-    els.exportUserButton.addEventListener("click", exportUserImport);
-    els.exportConversationButton.addEventListener("click", exportConversationImport);
-    els.exportAllButton.addEventListener("click", exportAll);
+    els.modeTagsButton.addEventListener("click", () => {
+      state.mode = "tags";
+      state.selectedMacroId = "";
+      state.editorMode = state.selectedTagId ? "tag" : (state.selectedGroupKey ? "group" : "empty");
+      render();
+    });
+
+    els.modeMacrosButton.addEventListener("click", () => {
+      state.mode = "macros";
+      state.selectedTagId = "";
+      state.selectedMacroId = "";
+      state.editorMode = state.selectedGroupKey ? "group" : "empty";
+      render();
+    });
+
+    els.saveDownloadButton.addEventListener("click", saveAndDownload);
+    els.exportTagImportButton.addEventListener("click", exportTagImportCsv);
 
     render();
     loadLocalTaxonomyIfAvailable();
+    loadLocalMacrosIfAvailable();
   </script>
 </body>
 </html>
