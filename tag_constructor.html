@@ -188,6 +188,10 @@
       grid-template-columns: minmax(230px, 300px) minmax(440px, 1fr) minmax(520px, 50vw);
     }
 
+    .shell.conditions-mode {
+      grid-template-columns: minmax(230px, 300px) minmax(360px, 0.9fr) minmax(520px, 1.1fr);
+    }
+
     .pane {
       min-width: 0;
       min-height: 0;
@@ -267,16 +271,11 @@
 
     .group-name {
       min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
       font-weight: 700;
     }
 
-    .group-meta {
-      color: var(--muted);
-      font-size: 12px;
-    }
+
 
     .count-pill {
       align-self: center;
@@ -339,6 +338,64 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
       gap: 10px;
+    }
+
+    .condition-field-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .condition-option-toolbar {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+    }
+
+    .condition-mode-control {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .condition-mode-control label,
+    .condition-option {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 9px 10px;
+    }
+
+    .condition-option {
+      cursor: pointer;
+    }
+
+    .condition-option input {
+      margin-top: 3px;
+    }
+
+    .condition-option-list {
+      display: grid;
+      gap: 8px;
+      max-height: 48vh;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .condition-option-code {
+      display: block;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
+
+    .condition-option-label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      overflow-wrap: anywhere;
     }
 
     .macro-list {
@@ -427,9 +484,7 @@
 
     .macro-title {
       min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow-wrap: anywhere;
       font-weight: 800;
     }
 
@@ -677,6 +732,7 @@
 
     .tag-label {
       font-weight: 700;
+      overflow-wrap: anywhere;
     }
 
     .tag-usage {
@@ -841,6 +897,7 @@
         <button id="importButton" type="button">Импорт</button>
         <button id="modeTagsButton" class="mode-button active" type="button">Tags</button>
         <button id="modeMacrosButton" class="mode-button" type="button">Macros</button>
+        <button id="modeConditionsButton" class="mode-button" type="button">CvDA Conditions</button>
         <button id="exportTagImportButton" type="button">Экспорт</button>
         <button id="saveDownloadButton" class="primary" type="button">Save and Download</button>
       </div>
@@ -880,8 +937,13 @@
   </div>
 
   <script>
-    const HEADERS = ["field", "tag", "category", "ru_label", "usage", "operator_selectable"];
-    const IMPORT_HEADERS = ["tag", "category", "ru_label", "usage"];
+    const HEADERS = ["field_name", "tag"];
+    const CVDA_ID_HEADERS = ["descriptor_id", "field_name", "option_id", "tag"];
+    const CONDITION_HEADERS = ["If option is", "Then show", "With these options"];
+    const CONDITION_ID_HEADERS = ["condition_id", "controlling_descriptor_id", "if_option_id", "If option is", "dependent_descriptor_id", "Then show", "dependent_option_id", "With these options"];
+    const LEGACY_HEADERS = ["field", "tag", "category", "ru_label", "usage", "operator_selectable"];
+    const IMPORT_HEADERS = ["field_name", "tag"];
+    const NEW_ID = "new";
     const CORE_FIELDS = ["user", "conversation"];
     const VALID_SELECTABLE = new Set(["yes", "no"]);
     const FIELD_PATTERN = /^[a-z][a-z0-9_]*$/;
@@ -891,15 +953,21 @@
       mode: "tags",
       rows: [],
       macros: [],
+      conditionsRows: [],
       selectedGroupKey: "",
       selectedTagId: "",
       selectedMacroId: "",
+      selectedConditionRoot: "",
+      selectedConditionTag: "",
       editorMode: "empty",
       search: "",
       fileName: "",
       macroFileName: "",
+      conditionsFileName: "",
+      newConditionRows: [],
       nextId: 1,
-      nextMacroId: 1
+      nextMacroId: 1,
+      nextConditionId: 1
     };
 
     const els = {
@@ -908,6 +976,7 @@
       importButton: document.getElementById("importButton"),
       modeTagsButton: document.getElementById("modeTagsButton"),
       modeMacrosButton: document.getElementById("modeMacrosButton"),
+      modeConditionsButton: document.getElementById("modeConditionsButton"),
       exportTagImportButton: document.getElementById("exportTagImportButton"),
       saveDownloadButton: document.getElementById("saveDownloadButton"),
       shell: document.getElementById("shell"),
@@ -940,6 +1009,12 @@
       return id;
     }
 
+    function makeConditionId() {
+      const id = "condition-" + state.nextConditionId;
+      state.nextConditionId += 1;
+      return id;
+    }
+
     function groupKey(field, category) {
       return field + "::" + category;
     }
@@ -960,6 +1035,11 @@
       return state.rows.filter(row => row.field === group.field && row.category === group.category);
     }
 
+    function getGroupDescriptorId(key) {
+      const row = getGroupRows(key).find(item => normalizeId(item.descriptor_id));
+      return row ? normalizeId(row.descriptor_id) : "";
+    }
+
     function getSelectedTag() {
       return state.rows.find(row => row.id === state.selectedTagId) || null;
     }
@@ -968,8 +1048,109 @@
       return state.macros.find(macro => macro.id === state.selectedMacroId) || null;
     }
 
+    function getSelectedConditionRootLabel() {
+      const rootTag = normalizeText(state.selectedConditionRoot);
+      if (!rootTag) {
+        return "";
+      }
+      const taxonomyRow = state.rows.find(row => row.tag === rootTag);
+      if (taxonomyRow) {
+        return composeDisplayTag(rootTag, taxonomyRow.ru_label);
+      }
+      const conditionRow = state.conditionsRows.find(row => row.rootTag === rootTag);
+      return conditionRow ? conditionRow.ifOptionIs : rootTag;
+    }
+
+    function getTagParts(tagValue) {
+      const raw = normalizeText(tagValue);
+      if (!raw) {
+        return { raw: "", code: "", label: "" };
+      }
+      const normalizedMatch = raw.match(/^(.+?)\s+[—-]\s+(.+)$/);
+      if (normalizedMatch) {
+        return {
+          raw,
+          code: normalizeText(normalizedMatch[1]),
+          label: normalizeText(normalizedMatch[2])
+        };
+      }
+      const match = raw.match(/^(.+?)\s+[—-]\s+(.+)$/);
+      if (!match) {
+        return { raw, code: raw, label: "" };
+      }
+      return {
+        raw,
+        code: normalizeText(match[1]),
+        label: normalizeText(match[2])
+      };
+    }
+
+    function getRowTagCode(row) {
+      if (!row) {
+        return "";
+      }
+      if (row.tag_code) {
+        return normalizeText(row.tag_code);
+      }
+      const raw = normalizeText(row.tag_display || row.tag);
+      const match = raw.match(/^(.+?)\s+[—-]\s+(.+)$/);
+      return normalizeText(match ? match[1] : raw);
+    }
+
     function getKnownTags() {
-      return new Set(state.rows.map(row => row.tag).filter(Boolean));
+      return new Set(state.rows.map(getRowTagCode).filter(Boolean));
+    }
+
+    function inferFieldFromTag(tag) {
+      const code = normalizeText(tag);
+      return code.startsWith("user.") ? "user" : "conversation";
+    }
+
+    function composeDisplayTag(tag, label) {
+      const code = normalizeText(tag);
+      const text = normalizeText(label);
+      return text ? code + " — " + text : code;
+    }
+
+    function getRowDisplayTag(row) {
+      if (!row) {
+        return "";
+      }
+      return normalizeText(row.tag_display || composeDisplayTag(row.tag, row.ru_label));
+    }
+
+    function buildLegacyFieldName(row) {
+      if (normalizeText(row.field_name)) {
+        return normalizeText(row.field_name);
+      }
+      if (normalizeText(row.category)) {
+        return normalizeText(row.category);
+      }
+      if (normalizeText(row.field)) {
+        return normalizeText(row.field);
+      }
+      return "group";
+    }
+
+    function cleanConditionFieldName(value) {
+      return normalizeText(value).replace(/^\s*\d+\.\s*/, "").trim();
+    }
+
+    function normalizeId(value) {
+      return String(value || "").trim();
+    }
+
+    function isNewId(value) {
+      return normalizeId(value).toLowerCase() === NEW_ID;
+    }
+
+    function extractTagCode(value) {
+      const raw = normalizeText(value);
+      if (!raw) {
+        return "";
+      }
+      const match = raw.match(/^(.+?)\s+[—-]\s+(.+)$/);
+      return normalizeText(match ? match[1] : raw);
     }
 
     function parseTagList(value) {
@@ -979,7 +1160,7 @@
         .filter(Boolean)));
     }
 
-    function parseCsv(text) {
+    function parseDelimitedCsv(text, delimiter) {
       const input = String(text || "").replace(/^\uFEFF/, "");
       const rows = [];
       let row = [];
@@ -1004,7 +1185,7 @@
 
         if (char === '"') {
           inQuotes = true;
-        } else if (char === ";") {
+        } else if (char === delimiter) {
           row.push(value);
           value = "";
         } else if (char === "\n") {
@@ -1022,7 +1203,110 @@
         rows.push(row);
       }
 
-      const nonEmptyRows = rows.filter(items => items.some(item => normalizeText(item)));
+      return rows.filter(items => items.some(item => normalizeText(item)));
+    }
+
+    function parseTagCsv(text) {
+      const commaRows = parseDelimitedCsv(text, ",");
+      if (commaRows.length) {
+        const commaHeaders = commaRows[0].map(normalizeText);
+        if (CVDA_ID_HEADERS.every(header => commaHeaders.includes(header))) {
+          const descriptorIndex = commaHeaders.indexOf("descriptor_id");
+          const fieldIndex = commaHeaders.indexOf("field_name");
+          const optionIndex = commaHeaders.indexOf("option_id");
+          const tagIndex = commaHeaders.indexOf("tag");
+          let currentDescriptorId = "";
+          let currentFieldName = "";
+          return commaRows.slice(1).map(items => {
+            const descriptorId = normalizeId(items[descriptorIndex]) || currentDescriptorId;
+            const fieldName = normalizeText(items[fieldIndex]) || currentFieldName;
+            const optionId = normalizeId(items[optionIndex]);
+            const displayTag = normalizeText(items[tagIndex]);
+            const parts = getTagParts(displayTag);
+            currentDescriptorId = descriptorId;
+            currentFieldName = fieldName;
+            return {
+              id: makeId(),
+              descriptor_id: descriptorId,
+              option_id: optionId,
+              field_name: fieldName,
+              field: inferFieldFromTag(parts.code),
+              category: fieldName,
+              tag: parts.code,
+              tag_code: parts.code,
+              tag_display: displayTag || parts.code,
+              ru_label: parts.label,
+              usage: "",
+              operator_selectable: "yes"
+            };
+          }).filter(row => row.field_name && row.tag);
+        }
+
+        if (HEADERS.every(header => commaHeaders.includes(header))) {
+          const fieldIndex = commaHeaders.indexOf("field_name");
+          const tagIndex = commaHeaders.indexOf("tag");
+          let currentFieldName = "";
+          return commaRows.slice(1).map(items => {
+            const fieldName = normalizeText(items[fieldIndex]) || currentFieldName;
+            const displayTag = normalizeText(items[tagIndex]);
+            const parts = getTagParts(displayTag);
+            currentFieldName = fieldName;
+            return {
+              id: makeId(),
+              descriptor_id: "",
+              option_id: "",
+              field_name: fieldName,
+              field: inferFieldFromTag(parts.code),
+              category: fieldName,
+              tag: parts.code,
+              tag_code: parts.code,
+              tag_display: displayTag || parts.code,
+              ru_label: parts.label,
+              usage: "",
+              operator_selectable: "yes"
+            };
+          }).filter(row => row.field_name && row.tag);
+        }
+      }
+
+      const legacyRows = parseDelimitedCsv(text, ";");
+      if (!legacyRows.length) {
+        return [];
+      }
+
+      const legacyHeaders = legacyRows[0].map(normalizeText);
+      const missing = LEGACY_HEADERS.filter(header => !legacyHeaders.includes(header));
+      if (missing.length) {
+        throw new Error("В CSV нет колонок: field_name, tag");
+      }
+
+      return legacyRows.slice(1).map(items => {
+        const rowObject = { id: makeId() };
+        legacyHeaders.forEach((header, index) => {
+          rowObject[header] = normalizeText(items[index]);
+        });
+        const code = extractTagCode(rowObject.tag);
+        const label = normalizeText(rowObject.ru_label);
+        const fieldName = buildLegacyFieldName(rowObject);
+        return {
+          id: rowObject.id,
+          descriptor_id: normalizeId(rowObject.descriptor_id),
+          option_id: normalizeId(rowObject.option_id),
+          field_name: fieldName,
+          field: normalizeText(rowObject.field) || inferFieldFromTag(code),
+          category: fieldName,
+          tag: code,
+          tag_code: code,
+          tag_display: composeDisplayTag(code, label),
+          ru_label: label,
+          usage: normalizeText(rowObject.usage),
+          operator_selectable: normalizeText(rowObject.operator_selectable || "yes")
+        };
+      }).filter(row => row.field_name && row.tag);
+    }
+
+    function parseCsv(text) {
+      const nonEmptyRows = parseDelimitedCsv(text, ";");
       if (!nonEmptyRows.length) {
         return [];
       }
@@ -1047,6 +1331,116 @@
       });
     }
 
+    function buildOptionLabel(tag, label) {
+      const cleanTag = normalizeText(tag);
+      const cleanLabel = normalizeText(label);
+      return cleanLabel ? cleanTag + " — " + cleanLabel : cleanTag;
+    }
+
+    function parseOptionTag(value) {
+      const normalized = normalizeText(value);
+      if (!normalized) {
+        return "";
+      }
+      const match = normalized.match(/^(.+?)\s+[—-]\s+(.+)$/);
+      return normalizeText(match ? match[1] : normalized);
+    }
+
+    function parseConditionsCsv(text) {
+      const nonEmptyRows = parseDelimitedCsv(text, ",");
+      if (!nonEmptyRows.length) {
+        return [];
+      }
+
+      const headers = nonEmptyRows[0].map(normalizeText);
+      const hasIdHeaders = CONDITION_ID_HEADERS.every(header => headers.includes(header));
+      if (hasIdHeaders) {
+        const conditionIndex = headers.indexOf("condition_id");
+        const controllingDescriptorIndex = headers.indexOf("controlling_descriptor_id");
+        const ifOptionIndex = headers.indexOf("if_option_id");
+        const ifIndex = headers.indexOf("If option is");
+        const dependentDescriptorIndex = headers.indexOf("dependent_descriptor_id");
+        const thenIndex = headers.indexOf("Then show");
+        const dependentOptionIndex = headers.indexOf("dependent_option_id");
+        const withIndex = headers.indexOf("With these options");
+        let current = null;
+
+        return nonEmptyRows.slice(1).map(items => {
+          const conditionId = normalizeId(items[conditionIndex]);
+          const controllingDescriptorId = normalizeId(items[controllingDescriptorIndex]);
+          const ifOptionId = normalizeId(items[ifOptionIndex]);
+          const ifOptionIs = normalizeText(items[ifIndex]);
+          const dependentDescriptorId = normalizeId(items[dependentDescriptorIndex]);
+          const thenShow = cleanConditionFieldName(items[thenIndex]);
+          const dependentOptionId = normalizeId(items[dependentOptionIndex]);
+          const withTheseOptions = normalizeText(items[withIndex]);
+          if (conditionId || controllingDescriptorId || ifOptionId || ifOptionIs || dependentDescriptorId || thenShow) {
+            current = {
+              condition_id: conditionId || NEW_ID,
+              controlling_descriptor_id: controllingDescriptorId,
+              if_option_id: ifOptionId,
+              ifOptionIs,
+              dependent_descriptor_id: dependentDescriptorId,
+              thenShow
+            };
+          }
+          if (!current) {
+            return null;
+          }
+          const finalDependentOptionId = dependentOptionId || (!withTheseOptions ? "*" : "");
+          return {
+            id: makeConditionId(),
+            condition_id: current.condition_id,
+            controlling_descriptor_id: current.controlling_descriptor_id,
+            if_option_id: current.if_option_id,
+            ifOptionIs: current.ifOptionIs,
+            dependent_descriptor_id: current.dependent_descriptor_id,
+            thenShow: current.thenShow,
+            dependent_option_id: finalDependentOptionId,
+            withTheseOptions,
+            rootTag: extractTagCode(current.ifOptionIs),
+            childTag: finalDependentOptionId === "*" ? "" : extractTagCode(withTheseOptions)
+          };
+        }).filter(Boolean).filter(row => row.ifOptionIs || row.thenShow || row.withTheseOptions || row.dependent_option_id);
+      }
+
+      const missing = CONDITION_HEADERS.filter(header => !headers.includes(header));
+      if (missing.length) {
+        throw new Error("В conditions CSV нет колонок: " + missing.join(", "));
+      }
+
+      const ifIndex = headers.indexOf("If option is");
+      const thenIndex = headers.indexOf("Then show");
+      const withIndex = headers.indexOf("With these options");
+      let currentIf = "";
+      let currentThen = "";
+
+      return nonEmptyRows.slice(1).map(items => {
+        const ifOptionIs = normalizeText(items[ifIndex]);
+        const thenShow = cleanConditionFieldName(items[thenIndex]);
+        const withTheseOptions = normalizeText(items[withIndex]);
+        if (ifOptionIs) {
+          currentIf = ifOptionIs;
+        }
+        if (thenShow) {
+          currentThen = thenShow;
+        }
+        return {
+          id: makeConditionId(),
+          condition_id: "",
+          controlling_descriptor_id: "",
+          if_option_id: "",
+          ifOptionIs: currentIf,
+          dependent_descriptor_id: "",
+          thenShow: currentThen,
+          dependent_option_id: withTheseOptions ? "" : "*",
+          withTheseOptions,
+          rootTag: extractTagCode(currentIf),
+          childTag: extractTagCode(withTheseOptions)
+        };
+      }).filter(row => row.ifOptionIs || row.thenShow || row.withTheseOptions);
+    }
+
     function csvValue(value) {
       return '"' + String(value || "").replace(/"/g, '""') + '"';
     }
@@ -1055,6 +1449,38 @@
       const lines = [
         headers.map(csvValue).join(";"),
         ...rows.map(row => headers.map(header => csvValue(row[header])).join(";"))
+      ];
+      return "\uFEFF" + lines.join("\r\n") + "\r\n";
+    }
+
+    function serializeTagRowsCsv(rows) {
+      const sortedRows = (rows || [])
+        .slice()
+        .sort((a, b) => {
+          const leftGroup = normalizeText(a.field_name).localeCompare(normalizeText(b.field_name), "ru");
+          if (leftGroup !== 0) {
+            return leftGroup;
+          }
+          return getRowDisplayTag(a).localeCompare(getRowDisplayTag(b), "ru");
+        });
+
+      let previousFieldName = "";
+      let previousDescriptorId = "";
+      const lines = [
+        CVDA_ID_HEADERS.map(csvValue).join(","),
+        ...sortedRows.map(row => {
+          const fieldName = normalizeText(row.field_name);
+          const descriptorId = normalizeId(row.descriptor_id);
+          const exportRow = {
+            descriptor_id: descriptorId === previousDescriptorId && fieldName === previousFieldName ? "" : descriptorId,
+            field_name: fieldName === previousFieldName ? "" : fieldName,
+            option_id: normalizeId(row.option_id),
+            tag: getRowDisplayTag(row)
+          };
+          previousDescriptorId = descriptorId;
+          previousFieldName = fieldName;
+          return CVDA_ID_HEADERS.map(header => csvValue(exportRow[header])).join(",");
+        })
       ];
       return "\uFEFF" + lines.join("\r\n") + "\r\n";
     }
@@ -1083,6 +1509,76 @@
       URL.revokeObjectURL(url);
     }
 
+    function serializeConditionsDelta(rows) {
+      return serializeConditionsIntercom(rows);
+    }
+
+    function serializeConditionsIntercom(rows) {
+      const groups = new Map();
+      (rows || []).forEach(row => {
+        const ifOptionIs = normalizeText(row.ifOptionIs);
+        const thenShow = normalizeText(row.thenShow);
+        if (!ifOptionIs || !thenShow) {
+          return;
+        }
+        const key = [
+          normalizeId(row.condition_id) || normalizeId(row.if_option_id) || normalizeText(row.rootTag) || extractTagCode(ifOptionIs),
+          normalizeId(row.dependent_descriptor_id) || thenShow
+        ].join("|");
+        if (!groups.has(key)) {
+          groups.set(key, {
+            condition_id: normalizeId(row.condition_id),
+            controlling_descriptor_id: normalizeId(row.controlling_descriptor_id),
+            if_option_id: normalizeId(row.if_option_id),
+            ifOptionIs,
+            dependent_descriptor_id: normalizeId(row.dependent_descriptor_id),
+            thenShow,
+            rows: []
+          });
+        }
+        groups.get(key).rows.push(row);
+      });
+
+      const lines = [CONDITION_ID_HEADERS.map(csvValue).join(",")];
+      Array.from(groups.values())
+        .sort((a, b) => [a.ifOptionIs, a.thenShow].join("|").localeCompare([b.ifOptionIs, b.thenShow].join("|"), "ru"))
+        .forEach(group => {
+          const wildcard = isWildcardConditionGroup(group.rows);
+          if (wildcard) {
+            lines.push(CONDITION_ID_HEADERS.map(header => csvValue({
+              condition_id: group.condition_id || NEW_ID,
+              controlling_descriptor_id: group.controlling_descriptor_id,
+              if_option_id: group.if_option_id,
+              "If option is": group.ifOptionIs,
+              dependent_descriptor_id: group.dependent_descriptor_id,
+              "Then show": group.thenShow,
+              dependent_option_id: "*",
+              "With these options": ""
+            }[header])).join(","));
+            return;
+          }
+
+          group.rows
+            .filter(row => normalizeText(row.withTheseOptions) || normalizeId(row.dependent_option_id))
+            .sort((a, b) => normalizeText(a.withTheseOptions || a.dependent_option_id).localeCompare(normalizeText(b.withTheseOptions || b.dependent_option_id), "ru"))
+            .forEach((row, index) => {
+              const item = {
+                condition_id: index === 0 ? (group.condition_id || NEW_ID) : "",
+                controlling_descriptor_id: index === 0 ? group.controlling_descriptor_id : "",
+                if_option_id: index === 0 ? group.if_option_id : "",
+                "If option is": index === 0 ? group.ifOptionIs : "",
+                dependent_descriptor_id: index === 0 ? group.dependent_descriptor_id : "",
+                "Then show": index === 0 ? group.thenShow : "",
+                dependent_option_id: normalizeId(row.dependent_option_id) || "",
+                "With these options": row.withTheseOptions
+              };
+              lines.push(CONDITION_ID_HEADERS.map(header => csvValue(item[header])).join(","));
+            });
+        });
+
+      return lines.join("\r\n") + "\r\n";
+    }
+
     function importRows(rows, fileName) {
       state.rows = rows;
       state.fileName = fileName || "helpdesk_tag_taxonomy.csv";
@@ -1091,6 +1587,18 @@
       const firstGroup = getGroups()[0];
       state.selectedGroupKey = firstGroup ? firstGroup.key : "";
       state.editorMode = state.selectedGroupKey ? "group" : "empty";
+      render();
+    }
+
+    function importConditions(rows, fileName) {
+      state.conditionsRows = rows;
+      state.conditionsFileName = fileName || "conditions.csv";
+      state.newConditionRows = [];
+      state.selectedConditionTag = "";
+      const roots = getConditionRoots();
+      if (!roots.some(root => root.tag === state.selectedConditionRoot)) {
+        state.selectedConditionRoot = roots[0] ? roots[0].tag : "";
+      }
       render();
     }
 
@@ -1173,6 +1681,254 @@
         }
       });
       return Array.from(fields).sort(compareFields);
+    }
+
+    function getActiveConversationTags() {
+      return state.rows
+        .filter(row => row.field === "conversation" && row.operator_selectable === "yes")
+        .slice()
+        .sort((a, b) => a.tag.localeCompare(b.tag, "ru"));
+    }
+
+    function getConditionRoots() {
+      const rootMap = new Map();
+
+      getActiveConversationTags()
+        .filter(row => row.tag.startsWith("op."))
+        .forEach(row => {
+          rootMap.set(row.tag, {
+            tag: row.tag,
+            descriptor_id: normalizeId(row.descriptor_id),
+            option_id: normalizeId(row.option_id),
+            label: composeDisplayTag(row.tag, row.ru_label),
+            fromTaxonomy: true
+          });
+        });
+
+      state.conditionsRows.forEach(row => {
+        if (!normalizeText(row.rootTag)) {
+          return;
+        }
+        if (!rootMap.has(row.rootTag)) {
+          rootMap.set(row.rootTag, {
+            tag: row.rootTag,
+            descriptor_id: normalizeId(row.controlling_descriptor_id),
+            option_id: normalizeId(row.if_option_id),
+            label: row.ifOptionIs || row.rootTag,
+            fromTaxonomy: false
+          });
+        }
+      });
+
+      return Array.from(rootMap.values()).sort((a, b) => a.label.localeCompare(b.label, "ru"));
+    }
+
+    function getConditionFields() {
+      const fieldMap = new Map();
+
+      getActiveConversationTags()
+        .filter(row => !row.tag.startsWith("op."))
+        .forEach(row => {
+          const sourceName = normalizeText(row.field_name || row.category);
+          const thenShow = cleanConditionFieldName(sourceName);
+          if (!thenShow) {
+            return;
+          }
+          if (!fieldMap.has(thenShow)) {
+            fieldMap.set(thenShow, {
+              thenShow,
+              sourceName,
+              descriptor_id: normalizeId(row.descriptor_id),
+              fromTaxonomy: true,
+              options: [],
+              optionTags: new Set()
+            });
+          }
+          const field = fieldMap.get(thenShow);
+          if (!field.optionTags.has(row.tag)) {
+            field.optionTags.add(row.tag);
+            field.options.push({
+              tag: row.tag,
+              option_id: normalizeId(row.option_id),
+              display: getRowDisplayTag(row),
+              label: normalizeText(row.ru_label),
+              fromTaxonomy: true
+            });
+          }
+        });
+
+      state.conditionsRows.forEach(row => {
+        const thenShow = normalizeText(row.thenShow);
+        if (!thenShow) {
+          return;
+        }
+        if (!fieldMap.has(thenShow)) {
+          fieldMap.set(thenShow, {
+            thenShow,
+            sourceName: thenShow,
+            descriptor_id: normalizeId(row.dependent_descriptor_id),
+            fromTaxonomy: false,
+            options: [],
+            optionTags: new Set()
+          });
+        }
+        if (!normalizeText(row.childTag)) {
+          return;
+        }
+        const field = fieldMap.get(thenShow);
+        if (!field.optionTags.has(row.childTag)) {
+          field.optionTags.add(row.childTag);
+          field.options.push({
+            tag: row.childTag,
+            option_id: normalizeId(row.dependent_option_id),
+            display: normalizeText(row.withTheseOptions) || row.childTag,
+            label: "",
+            fromTaxonomy: false
+          });
+        }
+      });
+
+      return Array.from(fieldMap.values())
+        .map(field => {
+          field.options = field.options
+            .slice()
+            .sort((a, b) => a.tag.localeCompare(b.tag, "ru"));
+          delete field.optionTags;
+          return field;
+        })
+        .sort((a, b) => a.thenShow.localeCompare(b.thenShow, "ru"));
+    }
+
+    function getConditionField(thenShow) {
+      const value = normalizeText(thenShow);
+      return getConditionFields().find(field => field.thenShow === value) || null;
+    }
+
+    function getConditionGroup(rootTag, thenShow) {
+      const root = normalizeText(rootTag);
+      const field = normalizeText(thenShow);
+      return state.conditionsRows
+        .filter(row => row.rootTag === root && normalizeText(row.thenShow) === field)
+        .slice()
+        .sort((a, b) => {
+          const left = normalizeText(a.childTag || a.withTheseOptions);
+          const right = normalizeText(b.childTag || b.withTheseOptions);
+          return left.localeCompare(right, "ru");
+        });
+    }
+
+    function isWildcardConditionGroup(rows) {
+      return (rows || []).some(row => normalizeId(row.dependent_option_id) === "*" || (!normalizeText(row.withTheseOptions) && !normalizeText(row.childTag)));
+    }
+
+    function getConfiguredConditionFieldCount(rootTag) {
+      const fields = new Set();
+      state.conditionsRows.forEach(row => {
+        if (row.rootTag === rootTag && normalizeText(row.thenShow)) {
+          fields.add(normalizeText(row.thenShow));
+        }
+      });
+      return fields.size;
+    }
+
+    function getConditionOptionDisplay(thenShow, tag) {
+      const field = getConditionField(thenShow);
+      const option = field ? field.options.find(item => item.tag === tag) : null;
+      return option ? option.display : tag;
+    }
+
+    function getConditionOptionId(thenShow, tag) {
+      const field = getConditionField(thenShow);
+      const option = field ? field.options.find(item => item.tag === tag) : null;
+      return option ? normalizeId(option.option_id) : "";
+    }
+
+    function getConditionRootDisplay(rootTag) {
+      const root = getConditionRoots().find(item => item.tag === rootTag);
+      return root ? root.label : rootTag;
+    }
+
+    function replaceConditionGroup(rootTag, thenShow, mode, optionTags) {
+      const root = normalizeText(rootTag);
+      const field = normalizeText(thenShow);
+      const selectedTags = Array.from(new Set((optionTags || []).map(normalizeText).filter(Boolean)));
+      const rootInfo = getConditionRoots().find(item => item.tag === root) || {};
+      const rootDisplay = rootInfo.label || root;
+      const dependentField = getConditionField(field) || {};
+      const existingRows = getConditionGroup(root, field);
+      const existingConditionId = normalizeId(existingRows.find(row => normalizeId(row.condition_id))?.condition_id) || NEW_ID;
+      const existingControllingDescriptorId = normalizeId(existingRows.find(row => normalizeId(row.controlling_descriptor_id))?.controlling_descriptor_id);
+      const existingIfOptionId = normalizeId(existingRows.find(row => normalizeId(row.if_option_id))?.if_option_id);
+      const existingDependentDescriptorId = normalizeId(existingRows.find(row => normalizeId(row.dependent_descriptor_id))?.dependent_descriptor_id);
+
+      state.conditionsRows = state.conditionsRows.filter(row => !(row.rootTag === root && normalizeText(row.thenShow) === field));
+
+      if (mode === "clear") {
+        state.newConditionRows = [];
+        return;
+      }
+
+      if (mode === "all") {
+        state.conditionsRows.push({
+          id: makeConditionId(),
+          condition_id: existingConditionId,
+          controlling_descriptor_id: existingControllingDescriptorId || normalizeId(rootInfo.descriptor_id),
+          if_option_id: existingIfOptionId || normalizeId(rootInfo.option_id),
+          ifOptionIs: rootDisplay,
+          dependent_descriptor_id: existingDependentDescriptorId || normalizeId(dependentField.descriptor_id),
+          thenShow: field,
+          dependent_option_id: "*",
+          withTheseOptions: "",
+          rootTag: root,
+          childTag: ""
+        });
+        state.newConditionRows = [];
+        return;
+      }
+
+      selectedTags.forEach(tag => {
+        state.conditionsRows.push({
+          id: makeConditionId(),
+          condition_id: existingConditionId,
+          controlling_descriptor_id: existingControllingDescriptorId || normalizeId(rootInfo.descriptor_id),
+          if_option_id: existingIfOptionId || normalizeId(rootInfo.option_id),
+          ifOptionIs: rootDisplay,
+          dependent_descriptor_id: existingDependentDescriptorId || normalizeId(dependentField.descriptor_id),
+          thenShow: field,
+          dependent_option_id: getConditionOptionId(field, tag) || NEW_ID,
+          withTheseOptions: getConditionOptionDisplay(field, tag),
+          rootTag: root,
+          childTag: tag
+        });
+      });
+      state.newConditionRows = [];
+    }
+
+    function getConditionRowsForRoot(rootTag) {
+      return state.conditionsRows
+        .filter(row => row.rootTag === rootTag && normalizeText(row.thenShow))
+        .slice()
+        .sort((a, b) => {
+          const left = [a.thenShow, a.withTheseOptions].join("|");
+          const right = [b.thenShow, b.withTheseOptions].join("|");
+          return left.localeCompare(right, "ru");
+        });
+    }
+
+    function getConfiguredConditionTagsForRoot(rootTag) {
+      return new Set(getConditionRowsForRoot(rootTag).map(row => row.childTag).filter(Boolean));
+    }
+
+    function getAvailableConditionTagsForRoot(rootTag) {
+      const configured = getConfiguredConditionTagsForRoot(rootTag);
+      return getActiveConversationTags()
+        .filter(row => !row.tag.startsWith("op.") && !configured.has(row.tag))
+        .filter(row => rowMatchesSearch(row))
+        .sort((a, b) => a.tag.localeCompare(b.tag, "ru"));
+    }
+
+    function getConditionThenShowOptions() {
+      return getConditionFields().map(field => field.thenShow);
     }
 
     function getMacroCountForTag(tag) {
@@ -1280,12 +2036,11 @@
         return true;
       }
       const haystack = [
-        row.field,
+        row.field_name,
         row.tag,
-        row.category,
+        getRowDisplayTag(row),
         row.ru_label,
-        row.usage,
-        row.operator_selectable
+        row.field
       ].join(" ").toLowerCase();
       return haystack.includes(state.search.toLowerCase());
     }
@@ -1347,6 +2102,36 @@
       const errors = [];
       const warnings = [];
       const byTag = new Map();
+
+      state.rows.forEach((row, index) => {
+        const line = index + 2;
+        if (!normalizeText(row.field_name)) {
+          errors.push("Строка " + line + ": пустое поле field_name.");
+        }
+        if (!normalizeText(getRowDisplayTag(row))) {
+          errors.push("Строка " + line + ": пустое поле tag.");
+        }
+
+        const tagCode = getRowTagCode(row);
+        if (!tagCode || !TAG_PATTERN.test(tagCode)) {
+          errors.push("Строка " + line + ": неверное имя тега " + (tagCode || getRowDisplayTag(row)) + ".");
+        }
+
+        if (tagCode) {
+          if (!byTag.has(tagCode)) {
+            byTag.set(tagCode, []);
+          }
+          byTag.get(tagCode).push(line);
+        }
+      });
+
+      byTag.forEach((lines, tag) => {
+        if (lines.length > 1) {
+          errors.push("Дубль tag " + tag + " в строках " + lines.join(", ") + ".");
+        }
+      });
+
+      return { errors, warnings };
 
       state.rows.forEach((row, index) => {
         const line = index + 2;
@@ -1419,7 +2204,45 @@
       return { errors, warnings };
     }
 
+    function validateConditions() {
+      const errors = [];
+      const warnings = [];
+      const roots = new Set(getConditionRoots().map(root => root.tag));
+      const fields = new Map(getConditionFields().map(field => [field.thenShow, new Set(field.options.map(option => option.tag))]));
+
+      state.conditionsRows.forEach((row, index) => {
+        const line = index + 2;
+        if (!normalizeText(row.ifOptionIs)) {
+          errors.push("Строка " + line + ": пустое значение If option is.");
+        }
+        if (!normalizeText(row.thenShow)) {
+          errors.push("Строка " + line + ": пустое значение Then show.");
+        }
+        if (normalizeText(row.rootTag) && !roots.has(row.rootTag)) {
+          warnings.push("Строка " + line + ": root tag " + row.rootTag + " не найден в CvDA catalog.");
+        }
+        if (normalizeText(row.thenShow) && !fields.has(normalizeText(row.thenShow))) {
+          warnings.push("Строка " + line + ": поле " + row.thenShow + " не найдено в CvDA catalog.");
+        }
+        if (normalizeText(row.childTag)) {
+          const options = fields.get(normalizeText(row.thenShow));
+          if (options && !options.has(row.childTag)) {
+            warnings.push("Строка " + line + ": option " + row.childTag + " не найден в группе " + row.thenShow + ".");
+          }
+        }
+      });
+
+      return { errors, warnings };
+    }
+
     function getStats(validation) {
+      return [
+        { label: "Groups", value: getGroups().length },
+        { label: "Tags", value: state.rows.length },
+        { label: "Errors", value: validation.errors.length },
+        { label: "Warnings", value: validation.warnings.length }
+      ];
+
       const activeUser = state.rows.filter(row => row.field === "user" && row.operator_selectable === "yes").length;
       const activeConversation = state.rows.filter(row => row.field === "conversation" && row.operator_selectable === "yes").length;
       const fieldCount = getFields().filter(field => state.rows.some(row => row.field === field)).length;
@@ -1448,6 +2271,28 @@
       ];
     }
 
+    function getConditionStats(validation) {
+      const groupKeys = new Set();
+      let wildcards = 0;
+      state.conditionsRows.forEach(row => {
+        if (normalizeText(row.rootTag) && normalizeText(row.thenShow)) {
+          groupKeys.add(row.rootTag + "|" + normalizeText(row.thenShow));
+        }
+        if (!normalizeText(row.withTheseOptions) && !normalizeText(row.childTag)) {
+          wildcards += 1;
+        }
+      });
+      return [
+        { label: "Roots", value: getConditionRoots().length },
+        { label: "Fields", value: getConditionFields().length },
+        { label: "Groups", value: groupKeys.size },
+        { label: "Rows", value: state.conditionsRows.length },
+        { label: "Wildcards", value: wildcards },
+        { label: "Errors", value: validation.errors.length },
+        { label: "Warnings", value: validation.warnings.length }
+      ];
+    }
+
     function escapeHtml(value) {
       return String(value || "")
         .replace(/&/g, "&amp;")
@@ -1463,6 +2308,7 @@
         export: '<path d="M12 21V9"></path><path d="m17 16-5 5-5-5"></path><path d="M4 9V6a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"></path>',
         tags: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"></path><path d="M7.5 7.5h.01"></path>',
         macros: '<path d="M8 7H5a2 2 0 0 0-2 2v1a2 2 0 0 0 2 2h3"></path><path d="M16 7h3a2 2 0 0 1 2 2v1a2 2 0 0 1-2 2h-3"></path><path d="M8 17h8"></path><path d="M8 12h8"></path>',
+        conditions: '<path d="M9 6h11"></path><path d="M9 12h11"></path><path d="M9 18h11"></path><path d="M4 6h.01"></path><path d="M4 12h.01"></path><path d="M4 18h.01"></path>',
         save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"></path><path d="M17 21v-8H7v8"></path><path d="M7 3v5h8"></path>'
       };
       return '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true">' + (icons[name] || "") + '</svg>';
@@ -1475,10 +2321,12 @@
     function render() {
       const validation = validateRows();
       const macroValidation = validateMacros();
+      const conditionValidation = validateConditions();
       const hasErrors = validation.errors.length > 0;
       const hasRows = state.rows.length > 0;
       const hasMacros = state.macros.length > 0;
       const hasMacroErrors = macroValidation.errors.length > 0;
+      const hasConditionErrors = conditionValidation.errors.length > 0;
 
       els.fileStatus.textContent = state.mode === "tags"
         ? (hasRows ? state.fileName + " | " + state.rows.length + " строк" : "CSV не загружен")
@@ -1487,42 +2335,95 @@
           hasMacros ? (state.macroFileName + " | " + state.macros.length + " макросов") : "macros не загружены"
         ].join(" | ");
 
+      if (state.mode === "conditions") {
+        els.fileStatus.textContent = [
+          hasRows ? "taxonomy: " + state.rows.length + " строк" : "taxonomy не загружена",
+          state.conditionsRows.length ? (state.conditionsFileName + " | " + state.conditionsRows.length + " conditions") : "conditions не загружены"
+        ].join(" | ");
+      }
       els.modeTagsButton.classList.toggle("active", state.mode === "tags");
       els.modeMacrosButton.classList.toggle("active", state.mode === "macros");
+      els.modeConditionsButton.classList.toggle("active", state.mode === "conditions");
       els.shell.classList.toggle("macro-mode", state.mode === "macros");
-      els.tagList.className = state.mode === "macros" ? "macro-list" : "tag-grid";
+      els.shell.classList.toggle("conditions-mode", state.mode === "conditions");
+      els.tagList.className = state.mode === "macros" ? "macro-list" : (state.mode === "conditions" ? "condition-field-list" : "tag-grid");
       els.saveDownloadButton.disabled = state.mode === "tags" ? (!hasRows || hasErrors) : (!hasMacros || hasMacroErrors);
+      if (state.mode === "conditions") {
+        els.saveDownloadButton.disabled = !hasRows || hasConditionErrors;
+      }
       els.exportTagImportButton.style.display = state.mode === "tags" ? "" : "none";
       els.exportTagImportButton.disabled = !hasRows || hasErrors;
       setButtonContent(els.importButton, "import", "Импорт");
       setButtonContent(els.modeTagsButton, "tags", "Tags");
       setButtonContent(els.modeMacrosButton, "macros", "Macros");
+      setButtonContent(els.modeConditionsButton, "conditions", "CvDA Conditions");
       setButtonContent(els.exportTagImportButton, "export", "Экспорт");
       setButtonContent(els.saveDownloadButton, "save", "Save and Download");
+      if (state.mode === "conditions") {
+        setButtonContent(els.saveDownloadButton, "save", "Export ID CSV");
+      }
       els.fileInput.accept = state.mode === "tags"
         ? ".csv,text/csv,text/plain,application/csv,application/vnd.ms-excel,application/octet-stream"
         : ".txt,.md,text/plain,text/markdown";
+      if (state.mode === "conditions") {
+        els.fileInput.accept = ".csv,text/csv,text/plain,application/csv,application/vnd.ms-excel,application/octet-stream";
+      }
       els.searchInput.placeholder = state.mode === "tags"
         ? "Поиск по tag, label, usage или category"
         : "Поиск по тегам, названию или тексту макроса";
+      if (state.mode === "conditions") {
+        els.searchInput.placeholder = "Поиск по root, then show или тегу";
+      }
       els.newGroupButton.style.display = state.mode === "tags" ? "" : "none";
       els.newTagButton.textContent = state.mode === "tags" ? "+ Тег" : "+ Макрос";
 
+      els.newTagButton.style.display = state.mode === "conditions" ? "none" : "";
       renderStats(state.mode === "tags" ? validation : macroValidation);
       renderValidation(state.mode === "tags" ? validation : macroValidation);
+      if (state.mode === "conditions") {
+        renderStats(conditionValidation);
+        renderValidation(conditionValidation);
+      }
       renderGroups();
       renderTags();
       renderEditor();
     }
 
     function renderStats(validation) {
-      const stats = state.mode === "tags" ? getStats(validation) : getMacroStats(validation);
+      const stats = state.mode === "conditions"
+        ? getConditionStats(validation)
+        : (state.mode === "tags" ? getStats(validation) : getMacroStats(validation));
       els.stats.innerHTML = stats.map(item => (
         '<div class="stat"><strong>' + item.value + '</strong><span>' + escapeHtml(item.label) + '</span></div>'
       )).join("");
     }
 
     function renderValidation(validation) {
+      if (state.mode === "conditions") {
+        if (!state.rows.length) {
+          els.validationBox.innerHTML = '<div class="message">Загрузите taxonomy, чтобы настраивать conditions.</div>';
+          return;
+        }
+        if (!state.conditionsRows.length) {
+          els.validationBox.innerHTML = '<div class="message">conditions.csv не загружен. Можно собрать новый Intercom CSV из редактора.</div>';
+          return;
+        }
+        if (validation.errors.length) {
+          const items = validation.errors.slice(0, 6).map(error => '<li>' + escapeHtml(error) + '</li>').join("");
+          const more = validation.errors.length > 6 ? '<li>Еще ошибок: ' + (validation.errors.length - 6) + '.</li>' : "";
+          els.validationBox.innerHTML = '<div class="message error"><strong>Экспорт conditions CSV заблокирован.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+          return;
+        }
+        if (validation.warnings.length) {
+          const items = validation.warnings.slice(0, 6).map(warning => '<li>' + escapeHtml(warning) + '</li>').join("");
+          const more = validation.warnings.length > 6 ? '<li>Еще предупреждений: ' + (validation.warnings.length - 6) + '.</li>' : "";
+          els.validationBox.innerHTML = '<div class="message warning"><strong>Есть теги без conditions.</strong><ul class="validation-list">' + items + more + '</ul></div>';
+          return;
+        }
+        els.validationBox.innerHTML = '<div class="message"><strong>Conditions проверены.</strong> Можно экспортировать ID-aware CSV.</div>';
+        return;
+      }
+
       if (state.mode === "macros") {
         if (!state.macros.length) {
           els.validationBox.innerHTML = '<div class="message">Загрузите macros_markdown.txt, чтобы начать редактирование макросов.</div>';
@@ -1567,6 +2468,11 @@
     }
 
     function renderGroups() {
+      if (state.mode === "conditions") {
+        renderConditionRoots();
+        return;
+      }
+
       const groups = getGroups().filter(groupMatchesSearch);
       if (!groups.length && state.mode !== "macros") {
         els.groupList.innerHTML = '<div class="empty">Группы не найдены.</div>';
@@ -1581,7 +2487,7 @@
         ? [
           '<div><div class="group-section-title">ALL</div><div class="group-list">',
           '<button class="group-button' + (!state.selectedGroupKey && !state.selectedTagId ? " active" : "") + '" type="button" data-all-macros="1">',
-          '<span><span class="group-name">all</span><span class="group-meta">все макросы</span></span>',
+          '<span><span class="group-name">all</span></span>',
           '<span class="count-pill">' + state.macros.length + '</span>',
           '</button>',
           '</div></div>'
@@ -1604,8 +2510,7 @@
           const countText = state.mode === "macros" ? macroCount : (group.active + '/' + group.total);
           return [
             '<button class="group-button' + isActive + noMacros + '" type="button" data-group="' + escapeHtml(group.key) + '">',
-            '<span><span class="group-name">' + escapeHtml(group.category) + '</span>',
-            '<span class="group-meta">' + metaText + '</span></span>',
+            '<span><span class="group-name">' + escapeHtml(group.category) + '</span></span>',
             '<span class="count-pill">' + countText + '</span>',
             '</button>'
           ].join("");
@@ -1638,10 +2543,66 @@
     }
 
     function renderTags() {
+      if (state.mode === "conditions") {
+        renderConditionsBrowser();
+        return;
+      }
+
       if (state.mode === "macros") {
         renderMacrosBrowser();
         return;
       }
+
+      const selectedGroup = splitGroupKey(state.selectedGroupKey);
+      const visibleRows = getGroupRows(state.selectedGroupKey)
+        .filter(rowMatchesSearch)
+        .sort((a, b) => getRowDisplayTag(a).localeCompare(getRowDisplayTag(b), "ru"));
+
+      els.newTagButton.disabled = !state.selectedGroupKey;
+      els.tagPaneTitle.textContent = state.selectedGroupKey
+        ? (selectedGroup.category || selectedGroup.field)
+        : "Теги";
+
+      if (!state.selectedGroupKey) {
+        els.tagList.innerHTML = '<div class="empty">Выберите группу слева или создайте новую.</div>';
+        return;
+      }
+
+      if (!visibleRows.length) {
+        els.tagList.innerHTML = '<div class="empty">В выбранной группе нет тегов по текущему поиску.</div>';
+        return;
+      }
+
+      els.tagList.innerHTML = visibleRows.map(row => {
+        const active = row.id === state.selectedTagId ? " active" : "";
+        return [
+          '<div class="tag-card' + active + '" role="button" tabindex="0" data-tag-id="' + escapeHtml(row.id) + '">',
+          '<span class="tag-top"><span class="tag-code">' + escapeHtml(getRowDisplayTag(row)) + '</span></span>',
+          '<span class="tag-label">' + escapeHtml(row.field_name || "") + '</span>',
+          '</div>'
+        ].join("");
+      }).join("");
+
+      els.tagList.querySelectorAll("[data-tag-id]").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.editorMode = "tag";
+          render();
+        });
+        card.addEventListener("keydown", event => {
+          if (event.target.closest("button")) {
+            return;
+          }
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
+          event.preventDefault();
+          state.selectedTagId = card.getAttribute("data-tag-id");
+          state.editorMode = "tag";
+          render();
+        });
+      });
+      return;
 
       const group = splitGroupKey(state.selectedGroupKey);
       const rows = getGroupRows(state.selectedGroupKey).filter(rowMatchesSearch).sort((a, b) => a.tag.localeCompare(b.tag));
@@ -1695,6 +2656,106 @@
         });
       });
 
+    }
+
+    function renderConditionRoots() {
+      const roots = getConditionRoots().filter(root => {
+        if (!state.search) {
+          return true;
+        }
+        return [root.tag, root.label].join(" ").toLowerCase().includes(state.search.toLowerCase());
+      });
+
+      if (!roots.length) {
+        els.groupList.innerHTML = '<div class="empty">Root operations не найдены.</div>';
+        return;
+      }
+
+      els.groupList.innerHTML = [
+        '<div><div class="group-section-title">ROOT OPERATIONS</div><div class="group-list">',
+        roots.map(root => {
+          const isActive = root.tag === state.selectedConditionRoot ? " active" : "";
+          const count = getConfiguredConditionFieldCount(root.tag);
+          return [
+            '<button class="group-button' + isActive + '" type="button" data-root-tag="' + escapeHtml(root.tag) + '">',
+            '<span><span class="group-name">' + escapeHtml(root.label) + '</span></span>',
+            '<span class="count-pill">' + count + '</span>',
+            '</button>'
+          ].join("");
+        }).join(""),
+        '</div></div>'
+      ].join("");
+
+      els.groupList.querySelectorAll("[data-root-tag]").forEach(button => {
+        button.addEventListener("click", () => {
+          state.selectedConditionRoot = button.getAttribute("data-root-tag");
+          state.selectedConditionTag = "";
+          render();
+        });
+      });
+    }
+
+    function renderConditionsBrowser() {
+      const rootTag = normalizeText(state.selectedConditionRoot);
+      els.newTagButton.disabled = true;
+      els.tagPaneTitle.textContent = rootTag ? (getSelectedConditionRootLabel() || rootTag) : "CvDA Conditions";
+
+      if (!rootTag) {
+        els.tagList.innerHTML = '<div class="empty">Выберите root operation слева.</div>';
+        return;
+      }
+
+      const fields = getConditionFields().filter(field => {
+        if (!state.search) {
+          return true;
+        }
+        const needle = state.search.toLowerCase();
+        return [
+          field.thenShow,
+          field.sourceName,
+          field.options.map(option => option.tag + " " + option.display).join(" ")
+        ].join(" ").toLowerCase().includes(needle);
+      });
+
+      if (!fields.length) {
+        els.tagList.innerHTML = '<div class="empty">Dependent fields не найдены. Загрузите CvDA catalog CSV.</div>';
+        return;
+      }
+
+      if (state.selectedConditionTag && !fields.some(field => field.thenShow === state.selectedConditionTag)) {
+        state.selectedConditionTag = "";
+      }
+
+      els.tagList.innerHTML = fields.map(field => {
+        const rows = getConditionGroup(rootTag, field.thenShow);
+        const wildcard = isWildcardConditionGroup(rows);
+        const active = field.thenShow === state.selectedConditionTag ? " active" : "";
+        const badgeClass = wildcard || rows.length ? "ok" : "warn";
+        const badgeText = wildcard ? "* all" : (rows.length ? rows.length + " selected" : "not configured");
+        const meta = field.fromTaxonomy ? field.sourceName : "fallback from conditions.csv";
+        return [
+          '<div class="tag-card' + active + '" role="button" tabindex="0" data-condition-field="' + escapeHtml(field.thenShow) + '">',
+          '<span class="tag-top"><span class="tag-code">' + escapeHtml(field.thenShow) + '</span><span class="badge ' + badgeClass + '">' + escapeHtml(badgeText) + '</span></span>',
+          '<span class="tag-label">' + escapeHtml(meta) + '</span>',
+          '<span class="tag-usage">' + field.options.length + ' options</span>',
+          '</div>'
+        ].join("");
+      }).join("");
+
+      els.tagList.querySelectorAll("[data-condition-field]").forEach(card => {
+        const selectTag = () => {
+          state.selectedConditionTag = card.getAttribute("data-condition-field");
+          render();
+        };
+        card.addEventListener("click", selectTag);
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") {
+            return;
+          }
+          event.preventDefault();
+          selectTag();
+        });
+      });
     }
 
     function renderMacrosBrowser() {
@@ -1785,10 +2846,17 @@
     }
 
     function createTagCopy(source) {
+      const sourceCode = getRowTagCode(source);
+      const copiedTag = makeCopiedTagName(sourceCode);
       const row = {
         id: makeId(),
+        descriptor_id: source.descriptor_id || "",
+        option_id: NEW_ID,
         field: source.field,
-        tag: makeCopiedTagName(source.tag),
+        field_name: source.field_name,
+        tag: copiedTag,
+        tag_code: copiedTag,
+        tag_display: composeDisplayTag(copiedTag, source.ru_label),
         category: source.category,
         ru_label: source.ru_label,
         usage: source.usage,
@@ -1830,6 +2898,11 @@
     }
 
     function renderEditor() {
+      if (state.mode === "conditions") {
+        renderConditionsEditor();
+        return;
+      }
+
       if (state.mode === "macros") {
         renderMacroEditor();
         return;
@@ -1857,6 +2930,113 @@
 
       els.editorTitle.textContent = "Редактор";
       els.editorBody.innerHTML = '<div class="empty">Загрузите CSV и выберите группу или тег.</div>';
+    }
+
+    function renderConditionsEditor() {
+      const rootTag = normalizeText(state.selectedConditionRoot);
+      const rootLabel = getSelectedConditionRootLabel();
+      const thenShow = normalizeText(state.selectedConditionTag);
+      const field = thenShow ? getConditionField(thenShow) : null;
+
+      els.editorTitle.textContent = "CvDA Conditions";
+      if (!rootTag) {
+        els.editorBody.innerHTML = '<div class="empty">Выберите root operation слева.</div>';
+        return;
+      }
+
+      if (!field) {
+        els.editorBody.innerHTML = '<div class="empty">Выберите dependent field в среднем списке.</div>';
+        return;
+      }
+
+      const groupRows = getConditionGroup(rootTag, field.thenShow);
+      const wildcard = isWildcardConditionGroup(groupRows);
+      const selectedTags = new Set(groupRows.map(row => row.childTag).filter(Boolean));
+      const optionsHtml = field.options.length
+        ? field.options.map(option => {
+          const checked = !wildcard && selectedTags.has(option.tag) ? " checked" : "";
+          const disabled = wildcard ? " disabled" : "";
+          const label = normalizeText(option.label) || option.display;
+          return [
+            '<label class="condition-option" data-option-search="' + escapeHtml((option.tag + " " + option.display + " " + label).toLowerCase()) + '">',
+            '<input type="checkbox" name="condition_option" value="' + escapeHtml(option.tag) + '"' + checked + disabled + '>',
+            '<span><span class="condition-option-code">' + escapeHtml(option.tag) + '</span>',
+            '<span class="condition-option-label">' + escapeHtml(label) + '</span></span>',
+            '</label>'
+          ].join("");
+        }).join("")
+        : '<div class="empty">В этой группе нет options из CvDA catalog.</div>';
+
+      els.editorBody.innerHTML = [
+        '<form id="conditionsForm" class="form">',
+        '<div class="field"><label>Root tag</label><input name="root_display" value="' + escapeHtml(rootLabel || rootTag) + '" readonly></div>',
+        '<div class="field"><label>Then show</label><input name="then_show" value="' + escapeHtml(field.thenShow) + '" readonly></div>',
+        '<div class="field"><label>Mode</label><div class="condition-mode-control">',
+        '<label><input type="radio" name="condition_mode" value="all"' + (wildcard ? " checked" : "") + '> All (*)</label>',
+        '<label><input type="radio" name="condition_mode" value="selected"' + (!wildcard ? " checked" : "") + '> Selected options</label>',
+        '</div></div>',
+        '<div class="condition-option-toolbar">',
+        '<input id="conditionOptionSearch" type="search" placeholder="Search options">',
+        '<button id="conditionSelectAll" type="button"' + (field.options.length ? "" : " disabled") + '>Select all</button>',
+        '<button id="conditionClear" class="danger" type="button">Clear</button>',
+        '</div>',
+        '<div class="condition-option-list">' + optionsHtml + '</div>',
+        '<div class="actions"><button class="primary" type="submit">Save condition</button></div>',
+        '</form>'
+      ].join("");
+
+      document.getElementById("conditionsForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const mode = form.condition_mode.value;
+        if (mode === "all") {
+          replaceConditionGroup(rootTag, field.thenShow, "all", []);
+          render();
+          return;
+        }
+
+        const optionTags = Array.from(form.querySelectorAll('input[name="condition_option"]:checked')).map(input => input.value);
+        if (!optionTags.length) {
+          alert("Выберите options или нажмите Clear.");
+          return;
+        }
+        replaceConditionGroup(rootTag, field.thenShow, "selected", optionTags);
+        render();
+      });
+
+      const form = document.getElementById("conditionsForm");
+      const modeInputs = Array.from(form.querySelectorAll('input[name="condition_mode"]'));
+      const optionInputs = Array.from(form.querySelectorAll('input[name="condition_option"]'));
+      const syncMode = () => {
+        const isAll = form.condition_mode.value === "all";
+        optionInputs.forEach(input => {
+          input.disabled = isAll;
+        });
+      };
+      modeInputs.forEach(input => input.addEventListener("change", syncMode));
+      syncMode();
+
+      document.getElementById("conditionSelectAll").addEventListener("click", () => {
+        form.condition_mode.value = "selected";
+        optionInputs.forEach(input => {
+          input.disabled = false;
+          input.checked = true;
+        });
+      });
+
+      document.getElementById("conditionClear").addEventListener("click", () => {
+        replaceConditionGroup(rootTag, field.thenShow, "clear", []);
+        render();
+      });
+
+      const searchInput = document.getElementById("conditionOptionSearch");
+      searchInput.addEventListener("input", () => {
+        const needle = searchInput.value.trim().toLowerCase();
+        form.querySelectorAll(".condition-option").forEach(label => {
+          const haystack = label.getAttribute("data-option-search") || "";
+          label.style.display = !needle || haystack.includes(needle) ? "" : "none";
+        });
+      });
     }
 
     function renderMacroEditor() {
@@ -2302,7 +3482,7 @@
           if (row.operator_selectable !== "yes" || excluded.has(row.tag)) {
             return false;
           }
-          const haystack = [row.tag, row.ru_label, row.category, row.field].join(" ").toLowerCase();
+          const haystack = [row.tag, getRowDisplayTag(row), row.ru_label, row.field_name, row.field].join(" ").toLowerCase();
           return haystack.includes(needle);
         })
         .sort((a, b) => {
@@ -2346,6 +3526,58 @@
     function renderGroupEditor() {
       const group = splitGroupKey(state.selectedGroupKey);
       const rows = getGroupRows(state.selectedGroupKey);
+      els.editorTitle.textContent = "Группа";
+      els.editorBody.innerHTML = [
+        '<form id="groupForm" class="form">',
+        '<div class="field"><label>field_name</label><input name="field_name" value="' + escapeHtml(group.category) + '" required></div>',
+        '<div class="message">Тегов в группе: ' + rows.length + '.</div>',
+        '<div class="actions">',
+        '<button class="primary" type="submit">Сохранить группу</button>',
+        '<button id="addTagFromGroup" type="button">+ Тег</button>',
+        '</div>',
+        '<div class="split-actions"><button id="deleteGroup" class="danger" type="button">Удалить группу</button></div>',
+        '</form>'
+      ].join("");
+
+      document.getElementById("groupForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const raw = Object.fromEntries(new FormData(event.currentTarget));
+        const nextFieldName = normalizeText(raw.field_name);
+        if (!nextFieldName) {
+          alert("field_name не может быть пустым.");
+          return;
+        }
+        const current = splitGroupKey(state.selectedGroupKey);
+        state.rows.forEach(row => {
+          if (row.field === current.field && row.category === current.category) {
+            row.field_name = nextFieldName;
+            row.category = nextFieldName;
+          }
+        });
+        state.selectedGroupKey = groupKey(current.field, nextFieldName);
+        state.editorMode = "group";
+        render();
+      });
+
+      document.getElementById("addTagFromGroup").addEventListener("click", () => {
+        state.selectedTagId = "";
+        state.editorMode = "newTag";
+        render();
+      });
+
+      document.getElementById("deleteGroup").addEventListener("click", () => {
+        if (!confirm("Удалить группу " + group.category + " и все ее теги из taxonomy?")) {
+          return;
+        }
+        state.rows = state.rows.filter(row => !(row.field === group.field && row.category === group.category));
+        const firstGroup = getGroups()[0];
+        state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+        state.selectedTagId = "";
+        state.editorMode = state.selectedGroupKey ? "group" : "empty";
+        render();
+      });
+      return;
+
       const active = rows.filter(row => row.operator_selectable === "yes").length;
       const archived = rows.length - active;
       els.editorTitle.textContent = "Группа";
@@ -2424,6 +3656,32 @@
       els.editorTitle.textContent = "Новая группа";
       els.editorBody.innerHTML = [
         '<form id="newGroupForm" class="form">',
+        '<div class="field"><label>field_name</label><input name="field_name" placeholder="1.Операция - case_operation" required></div>',
+        '<div class="field"><label>Первый tag</label><input name="tag" placeholder="op.app или law.115fz — 115-ФЗ" required></div>',
+        '<div class="actions"><button class="primary" type="submit">Создать группу</button></div>',
+        '</form>'
+      ].join("");
+
+      document.getElementById("newGroupForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const raw = Object.fromEntries(new FormData(event.currentTarget));
+        const row = makeRow({
+          descriptor_id: NEW_ID,
+          option_id: NEW_ID,
+          field_name: raw.field_name,
+          group_field_name: raw.field_name,
+          tag: raw.tag
+        });
+        state.rows.push(row);
+        state.selectedGroupKey = groupKey(row.field, row.category);
+        state.selectedTagId = row.id;
+        state.editorMode = "tag";
+        render();
+      });
+      return;
+      els.editorTitle.textContent = "Новая группа";
+      els.editorBody.innerHTML = [
+        '<form id="newGroupForm" class="form">',
         renderFieldModeControl("conversation"),
         '<div class="field"><label>Category</label><input name="category" placeholder="status" required></div>',
         '<div class="field"><label>Первый tag</label><input name="tag" placeholder="status.processing" required></div>',
@@ -2461,6 +3719,80 @@
     }
 
     function renderTagEditor(row) {
+      const groupInfo = splitGroupKey(state.selectedGroupKey);
+      const isNewTag = !row;
+      const dataRow = row || {
+        descriptor_id: getGroupDescriptorId(state.selectedGroupKey) || "",
+        option_id: NEW_ID,
+        field_name: groupInfo.category || "",
+        tag: "",
+        tag_display: "",
+        category: groupInfo.category || "",
+        ru_label: ""
+      };
+
+      els.editorTitle.textContent = isNewTag ? "Новый тег" : "Тег";
+      els.editorBody.innerHTML = [
+        '<form id="tagForm" class="form">',
+        '<input type="hidden" name="descriptor_id" value="' + escapeHtml(dataRow.descriptor_id || getGroupDescriptorId(state.selectedGroupKey) || "") + '">',
+        '<input type="hidden" name="option_id" value="' + escapeHtml(isNewTag ? NEW_ID : (dataRow.option_id || "")) + '">',
+        '<div class="field"><label>field_name</label><input value="' + escapeHtml(groupInfo.category || dataRow.field_name || "") + '" readonly></div>',
+        '<div class="field"><label>tag</label><input id="tagInput" name="tag" value="' + escapeHtml(getRowDisplayTag(dataRow)) + '" placeholder="law.115fz — 115-ФЗ" required></div>',
+        '<div class="actions"><button class="primary" type="submit">' + (isNewTag ? "Создать тег" : "Сохранить тег") + '</button></div>',
+        isNewTag ? "" : [
+        '<div class="split-actions tag-actions">',
+          '<button id="copyTag" class="copy-tag-button" type="button" title="Создать копию этого тега в той же группе">Копировать тег</button>',
+          '<button id="deleteTag" class="danger" type="button">Удалить тег</button>',
+          '</div>'
+        ].join(""),
+        '</form>'
+      ].join("");
+
+      document.getElementById("tagForm").addEventListener("submit", event => {
+        event.preventDefault();
+        const form = Object.fromEntries(new FormData(event.currentTarget));
+        form.group_field_name = groupInfo.category;
+        form.field_name = groupInfo.category;
+        form.group_descriptor_id = getGroupDescriptorId(state.selectedGroupKey);
+        const next = makeRow(form, row ? row.id : null);
+        if (row) {
+          Object.assign(row, next);
+        } else {
+          state.rows.push(next);
+          state.selectedTagId = next.id;
+          state.search = "";
+          els.searchInput.value = "";
+        }
+        state.selectedGroupKey = groupKey(next.field, next.category);
+        state.editorMode = "tag";
+        render();
+      });
+
+      const copyTagButtonNew = document.getElementById("copyTag");
+      if (copyTagButtonNew && row) {
+        copyTagButtonNew.addEventListener("click", () => {
+          createTagCopy(row);
+        });
+      }
+
+      const deleteTagButtonNew = document.getElementById("deleteTag");
+      if (deleteTagButtonNew && row) {
+        deleteTagButtonNew.addEventListener("click", () => {
+          if (!confirm("Удалить тег " + getRowDisplayTag(row) + " из taxonomy?")) {
+            return;
+          }
+          state.rows = state.rows.filter(item => item.id !== row.id);
+          if (!getGroupRows(state.selectedGroupKey).length) {
+            const firstGroup = getGroups()[0];
+            state.selectedGroupKey = firstGroup ? firstGroup.key : "";
+          }
+          state.selectedTagId = "";
+          state.editorMode = state.selectedGroupKey ? "group" : "empty";
+          render();
+        });
+      }
+      return;
+
       const group = splitGroupKey(state.selectedGroupKey);
       const isNew = !row;
       const data = row || {
@@ -2559,14 +3891,22 @@
     }
 
     function makeRow(form, id) {
+      const displayTag = normalizeText(form.tag);
+      const parts = getTagParts(displayTag);
+      const fieldName = normalizeText(form.group_field_name || form.field_name || form.category);
       return {
         id: id || makeId(),
-        field: normalizeText(form.field),
-        tag: normalizeText(form.tag),
-        category: normalizeText(form.category),
-        ru_label: normalizeText(form.ru_label),
-        usage: normalizeText(form.usage),
-        operator_selectable: normalizeText(form.operator_selectable || "yes")
+        descriptor_id: normalizeId(form.descriptor_id || form.group_descriptor_id || ""),
+        option_id: normalizeId(form.option_id || (id ? "" : NEW_ID)),
+        field_name: fieldName,
+        field: normalizeText(form.field) || inferFieldFromTag(parts.code),
+        tag: parts.code,
+        tag_code: parts.code,
+        tag_display: displayTag || parts.code,
+        category: fieldName,
+        ru_label: parts.label,
+        usage: "",
+        operator_selectable: "yes"
       };
     }
 
@@ -2576,7 +3916,7 @@
         alert("Экспорт заблокирован: исправьте ошибки валидации.");
         return;
       }
-      downloadCsv("helpdesk_tag_taxonomy.csv", state.rows, HEADERS);
+      downloadText("helpdesk_tag_taxonomy.csv", serializeTagRowsCsv(state.rows), "text/csv;charset=utf-8");
     }
 
     function exportUserImport() {
@@ -2608,7 +3948,7 @@
         alert("Экспорт заблокирован: исправьте ошибки валидации.");
         return;
       }
-      const text = serializeTagImportList(state.rows);
+      const text = serializeTagRowsCsv(state.rows);
       if (!text.trim()) {
         alert("Нет активных тегов для экспорта.");
         return;
@@ -2644,7 +3984,25 @@
       downloadText("macros_markdown.txt", serializeMacrosMarkdown(state.macros), "text/plain;charset=utf-8");
     }
 
+    function exportConditionsDelta() {
+      exportConditionsIntercom();
+    }
+
+    function exportConditionsIntercom() {
+      const validation = validateConditions();
+      if (validation.errors.length) {
+        alert("Экспорт conditions CSV заблокирован: исправьте ошибки conditions.");
+        return;
+      }
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      downloadText("cvda_conditions_idaware_" + timestamp + ".csv", serializeConditionsIntercom(state.conditionsRows), "text/csv;charset=utf-8");
+    }
+
     function saveAndDownload() {
+      if (state.mode === "conditions") {
+        exportConditionsIntercom();
+        return;
+      }
       if (state.mode === "macros") {
         exportMacros();
         return;
@@ -2654,13 +4012,16 @@
 
     async function loadLocalTaxonomyIfAvailable() {
       try {
-        const response = await fetch("helpdesk_tag_taxonomy.csv", { cache: "no-store" });
+        let response = await fetch("helpdesk_tag_taxonomy.csv", { cache: "no-store" });
+        if (!response.ok) {
+          response = await fetch("mainfiles/helpdesk_tag_taxonomy.csv", { cache: "no-store" });
+        }
         if (!response.ok) {
           return;
         }
         const text = await response.text();
-        const rows = parseCsv(text);
-        importRows(rows, "helpdesk_tag_taxonomy.csv");
+        const rows = parseTagCsv(text);
+        importRows(rows, response.url.includes("mainfiles/") ? "mainfiles/helpdesk_tag_taxonomy.csv" : "helpdesk_tag_taxonomy.csv");
       } catch (error) {
         render();
       }
@@ -2676,6 +4037,22 @@
         state.macros = parseMacrosMarkdown(text);
         state.macroFileName = "macros_markdown.txt";
         render();
+      } catch (error) {
+        render();
+      }
+    }
+
+    async function loadLocalConditionsIfAvailable() {
+      try {
+        let response = await fetch("conditions.csv", { cache: "no-store" });
+        if (!response.ok) {
+          response = await fetch("mainfiles/conditions.csv", { cache: "no-store" });
+        }
+        if (!response.ok) {
+          return;
+        }
+        const text = await response.text();
+        importConditions(parseConditionsCsv(text), response.url.includes("mainfiles/") ? "mainfiles/conditions.csv" : "conditions.csv");
       } catch (error) {
         render();
       }
@@ -2706,8 +4083,10 @@
         const text = await readFileAsText(file);
         if (state.mode === "macros") {
           importMacros(parseMacrosMarkdown(text), file.name);
+        } else if (state.mode === "conditions") {
+          importConditions(parseConditionsCsv(text), file.name);
         } else {
-          importRows(parseCsv(text), file.name);
+          importRows(parseTagCsv(text), file.name);
         }
       } catch (error) {
         alert("Не удалось импортировать файл: " + error.message);
@@ -2744,6 +4123,11 @@
     });
 
     els.clearSelectionButton.addEventListener("click", () => {
+      if (state.mode === "conditions") {
+        state.selectedConditionTag = "";
+        render();
+        return;
+      }
       state.selectedTagId = "";
       state.selectedMacroId = "";
       state.editorMode = state.selectedGroupKey ? "group" : "empty";
@@ -2765,12 +4149,24 @@
       render();
     });
 
+    els.modeConditionsButton.addEventListener("click", () => {
+      state.mode = "conditions";
+      state.selectedTagId = "";
+      state.selectedMacroId = "";
+      const roots = getConditionRoots();
+      if (!roots.some(root => root.tag === state.selectedConditionRoot)) {
+        state.selectedConditionRoot = roots[0] ? roots[0].tag : "";
+      }
+      render();
+    });
+
     els.saveDownloadButton.addEventListener("click", saveAndDownload);
     els.exportTagImportButton.addEventListener("click", exportTagImportCsv);
 
     render();
     loadLocalTaxonomyIfAvailable();
     loadLocalMacrosIfAvailable();
+    loadLocalConditionsIfAvailable();
   </script>
 </body>
 </html>
