@@ -1521,17 +1521,21 @@
         if (!ifOptionIs || !thenShow) {
           return;
         }
+        const conditionId = resolveConditionId(row);
+        const concreteConditionId = concreteId(conditionId);
+        const resolvedIfOptionId = resolveConditionIfOptionId(row);
+        const resolvedDependentDescriptorId = resolveConditionDependentDescriptorId(row);
         const key = [
-          normalizeId(row.condition_id) || normalizeId(row.if_option_id) || normalizeText(row.rootTag) || extractTagCode(ifOptionIs),
-          normalizeId(row.dependent_descriptor_id) || thenShow
+          concreteConditionId || resolvedIfOptionId || normalizeText(row.rootTag) || extractTagCode(ifOptionIs) || ifOptionIs,
+          resolvedDependentDescriptorId || thenShow
         ].join("|");
         if (!groups.has(key)) {
           groups.set(key, {
-            condition_id: normalizeId(row.condition_id),
-            controlling_descriptor_id: normalizeId(row.controlling_descriptor_id),
-            if_option_id: normalizeId(row.if_option_id),
+            condition_id: conditionId,
+            controlling_descriptor_id: resolveConditionControllingDescriptorId(row),
+            if_option_id: resolvedIfOptionId,
             ifOptionIs,
-            dependent_descriptor_id: normalizeId(row.dependent_descriptor_id),
+            dependent_descriptor_id: resolvedDependentDescriptorId,
             thenShow,
             rows: []
           });
@@ -1569,7 +1573,7 @@
                 "If option is": index === 0 ? group.ifOptionIs : "",
                 dependent_descriptor_id: index === 0 ? group.dependent_descriptor_id : "",
                 "Then show": index === 0 ? group.thenShow : "",
-                dependent_option_id: normalizeId(row.dependent_option_id) || "",
+                dependent_option_id: resolveConditionDependentOptionId(row) || "",
                 "With these options": row.withTheseOptions
               };
               lines.push(CONDITION_ID_HEADERS.map(header => csvValue(item[header])).join(","));
@@ -1843,6 +1847,57 @@
       return option ? normalizeId(option.option_id) : "";
     }
 
+    function concreteId(value) {
+      const id = normalizeId(value);
+      return id && !isNewId(id) ? id : "";
+    }
+
+    function firstConcreteId(rows, fieldName) {
+      const row = (rows || []).find(item => concreteId(item[fieldName]));
+      return row ? concreteId(row[fieldName]) : "";
+    }
+
+    function getConditionRootInfo(rootTag) {
+      const tag = normalizeText(rootTag);
+      return getConditionRoots().find(item => item.tag === tag) || null;
+    }
+
+    function getConditionRootTagFromRow(row) {
+      return normalizeText(row.rootTag) || extractTagCode(row.ifOptionIs);
+    }
+
+    function getConditionRootInfoFromRow(row) {
+      return getConditionRootInfo(getConditionRootTagFromRow(row));
+    }
+
+    function resolveConditionId(row) {
+      return normalizeId(row.condition_id) || NEW_ID;
+    }
+
+    function resolveConditionControllingDescriptorId(row) {
+      const rootInfo = getConditionRootInfoFromRow(row);
+      return concreteId(rootInfo?.descriptor_id) || concreteId(row.controlling_descriptor_id);
+    }
+
+    function resolveConditionIfOptionId(row) {
+      const rootInfo = getConditionRootInfoFromRow(row);
+      return concreteId(rootInfo?.option_id) || concreteId(row.if_option_id);
+    }
+
+    function resolveConditionDependentDescriptorId(row) {
+      const field = getConditionField(row.thenShow);
+      return concreteId(field?.descriptor_id) || concreteId(row.dependent_descriptor_id);
+    }
+
+    function resolveConditionDependentOptionId(row) {
+      if (normalizeId(row.dependent_option_id) === "*") {
+        return "*";
+      }
+      const tag = normalizeText(row.childTag) || extractTagCode(row.withTheseOptions);
+      const optionId = tag ? getConditionOptionId(row.thenShow, tag) : "";
+      return concreteId(optionId) || concreteId(row.dependent_option_id);
+    }
+
     function getConditionRootDisplay(rootTag) {
       const root = getConditionRoots().find(item => item.tag === rootTag);
       return root ? root.label : rootTag;
@@ -1857,9 +1912,9 @@
       const dependentField = getConditionField(field) || {};
       const existingRows = getConditionGroup(root, field);
       const existingConditionId = normalizeId(existingRows.find(row => normalizeId(row.condition_id))?.condition_id) || NEW_ID;
-      const existingControllingDescriptorId = normalizeId(existingRows.find(row => normalizeId(row.controlling_descriptor_id))?.controlling_descriptor_id);
-      const existingIfOptionId = normalizeId(existingRows.find(row => normalizeId(row.if_option_id))?.if_option_id);
-      const existingDependentDescriptorId = normalizeId(existingRows.find(row => normalizeId(row.dependent_descriptor_id))?.dependent_descriptor_id);
+      const existingControllingDescriptorId = firstConcreteId(existingRows, "controlling_descriptor_id");
+      const existingIfOptionId = firstConcreteId(existingRows, "if_option_id");
+      const existingDependentDescriptorId = firstConcreteId(existingRows, "dependent_descriptor_id");
 
       state.conditionsRows = state.conditionsRows.filter(row => !(row.rootTag === root && normalizeText(row.thenShow) === field));
 
@@ -2229,6 +2284,19 @@
           if (options && !options.has(row.childTag)) {
             warnings.push("Строка " + line + ": option " + row.childTag + " не найден в группе " + row.thenShow + ".");
           }
+        }
+        if (!resolveConditionControllingDescriptorId(row)) {
+          errors.push("Line " + line + ": controlling_descriptor_id was not resolved from CvDA catalog.");
+        }
+        if (!resolveConditionIfOptionId(row)) {
+          errors.push("Line " + line + ": if_option_id was not resolved from CvDA catalog.");
+        }
+        if (!resolveConditionDependentDescriptorId(row)) {
+          errors.push("Line " + line + ": dependent_descriptor_id was not resolved from CvDA catalog.");
+        }
+        const wildcard = normalizeId(row.dependent_option_id) === "*" || (!normalizeText(row.withTheseOptions) && !normalizeText(row.childTag));
+        if (!wildcard && !resolveConditionDependentOptionId(row)) {
+          errors.push("Line " + line + ": dependent_option_id was not resolved from CvDA catalog.");
         }
       });
 
